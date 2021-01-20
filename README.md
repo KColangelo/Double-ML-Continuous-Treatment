@@ -1,4 +1,4 @@
-# DDML: An Implementation of Double Debiased Machine Learning for Continuous Treatments
+# Double Debiased Machine Learning for Continuous Treatments
 
 # Table of Contents
 1. [Introduction](#introduction)
