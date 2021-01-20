@@ -29,9 +29,9 @@ simulation.py will append to any existing simulation data in the simulations fol
 to start from scratch you must delete the excel files in the simulation folder.
 
 To replicate the empirical application:<br />
-(1) run empirical_application.py<br />
-(2) run partial_effects.py<br />
-(3) run graphs.py
+(1) Run empirical_application.py<br />
+(2) Run partial_effects.py<br />
+(3) Run graphs.py
 
 empirical_application.py reads the data and runs the estimation, and the estimates, standard errors,
 bandwidth information and gps estimates are saved for each ml method (for both the initial choice of
@@ -48,7 +48,8 @@ the simulation and empirical application files. Within the folder are 4 files:
 -estimation.py is where we define the class which describes the main estimator, defined as DDMLCT. 
  After importing CL2020, we can initialize a DDMLCT object by calling CL2020.DDMLCT(model1,model2).<br />
 -file_management.py defines a function which we use to help organize the file structure of the output<br />
--models.py defines the neural network models we use in both the simulations and empirical application
+-models.py defines the neural network models we use in both the simulations and empirical application. 
+For other models (lasso and random forest) we use the models form sklearn directly.
 
 ## Simulation Results Files <a name"sim-names"></a>
 In the simulation folder, we save files with names that denote choice of c,n,L, and ml method.
