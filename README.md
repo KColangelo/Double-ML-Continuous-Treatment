@@ -57,7 +57,7 @@ with c=0.5, ml=lasso, L=1, and n=500. After these are compiled into the concise 
 simulation_results.py, the results are save in table_raw.xlsx. To get the exact formatting as in the
 paper, copy the values into dgp_table.xlsx.
 
-## Empirical Application Files <name="emp-files"></a>
+## Empirical Application Files <a name="emp-files"></a>
 The data used is denoted "emp_app.csv"
 In the estimates subfolder there are 7 files. "Summary.xlsx" stores the summary statistcs we dispay
 in the paper. Every other file stores the estimates for the empirical application. File names denote
@@ -81,7 +81,7 @@ Files ending in "hstar" are generated using the optimal computed bandwidth. File
 "beta.png" for the dose-response function and "theta.png" for the partial effects. We also save the
 histogram we show in the paper as histogram.png.
 
-## Packages Used <name="packages"></a>
+## Packages Used <a name="packages"></a>
 Packages and exact versions used when we generated our results:
 -Numpy 1.18.1
 -pandas 1.0.3
@@ -92,6 +92,6 @@ Packages and exact versions used when we generated our results:
 -matplotlib 3.1.3
 -pillow 7.0.0
 
-## Additional Notes <name="notes"></a>
+## Additional Notes <a name="notes"></a>
 Additional details are included as comments within each respective file.
 
