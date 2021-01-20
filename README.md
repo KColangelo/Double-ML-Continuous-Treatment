@@ -51,7 +51,7 @@ the simulation and empirical application files. Within the folder are 4 files:
 -models.py defines the neural network models we use in both the simulations and empirical application. 
 For other models (lasso and random forest) we use the models form sklearn directly.
 
-## Simulation Results Files <a name"sim-names"></a>
+## Simulation Results Files <a name="sim-names"></a>
 In the simulation folder, we save files with names that denote choice of c,n,L, and ml method.
 For example: dgp_c0.5_lasso_L1_N500.csv means this is a file corresponding the DGP in the simulations,
 with c=0.5, ml=lasso, L=1, and n=500. After these are compiled into the concise results using 
