@@ -2,13 +2,19 @@
 
 # Table of Contents
 1. [Introduction](#introduction)
-2. [Getting Started](#getting-started)
+2. [How to Replicate the Results](#replication)
+3. [Additional Code Files](#additional-files)
+4. [Simulation Results Files](#sim-names)
+5. [Empirical Application Files](#emp-files)
+6. [Packages Used](#packages)
+7. [Additional Notes](#notes)
 
 ## Introduction <a name="introduction"></a>
 This code was used for the simulation and empirical application
-results in Colangelo and Lee (2020). 
+results in Colangelo and Lee (2020). Please cite the authors appropriately if you 
+use any of this code.
 
-## Getting Started <a name="getting-started"></a>
+## How to Replicate the Results <a name="replication"></a>
 
 To replicate the results as in Colangelo and Lee (2020):
 
@@ -34,6 +40,7 @@ computes the partial effects as we did in the paper and resaves each file with t
 graphs.py then generates graphs for all the estimates of beta and the partial effects. The graphs
 used in the paper are saved as "beta.png" and "theta.png". 
 
+## Additional Code Files <a name="additional-files"></a>
 Additional files are in the folder "CL2020". CL2020 was created as a module to be imported into 
 the simulation and empirical application files. Within the folder are 4 files:
 
@@ -43,14 +50,14 @@ the simulation and empirical application files. Within the folder are 4 files:
 -file_management.py defines a function which we use to help organize the file structure of the output
 -models.py defines the neural network models we use in both the simulations and empirical application
 
-Notes on file names:
+## Simulation Results Files <a name"sim-names"></a>
 In the simulation folder, we save files with names that denote choice of c,n,L, and ml method.
 For example: dgp_c0.5_lasso_L1_N500.csv means this is a file corresponding the DGP in the simulations,
 with c=0.5, ml=lasso, L=1, and n=500. After these are compiled into the concise results using 
 simulation_results.py, the results are save in table_raw.xlsx. To get the exact formatting as in the
 paper, copy the values into dgp_table.xlsx.
 
-In the empirical application folder:
+## Empirical Application Files <name="emp-files"></a>
 The data used is denoted "emp_app.csv"
 In the estimates subfolder there are 7 files. "Summary.xlsx" stores the summary statistcs we dispay
 in the paper. Every other file stores the estimates for the empirical application. File names denote
@@ -74,6 +81,7 @@ Files ending in "hstar" are generated using the optimal computed bandwidth. File
 "beta.png" for the dose-response function and "theta.png" for the partial effects. We also save the
 histogram we show in the paper as histogram.png.
 
+## Packages Used <name="packages"></a>
 Packages and exact versions used when we generated our results:
 -Numpy 1.18.1
 -pandas 1.0.3
@@ -84,5 +92,6 @@ Packages and exact versions used when we generated our results:
 -matplotlib 3.1.3
 -pillow 7.0.0
 
+## Additional Notes <name="notes"></a>
 Additional details are included as comments within each respective file.
 
