@@ -1,0 +1,24 @@
+# Don't track content of these folders
+old/
+Relevant Papers/
+
+
+# Miscellaneous log files and such
+*.aux
+*.bbl
+*.blg
+*.log
+*.gz
+*.zip
+*.xml
+*.bcf
+*.dta
+*.zip
+*.xla
+*.bib
+*.tex
+*.pdf
+.Rhistory
+
+
+
