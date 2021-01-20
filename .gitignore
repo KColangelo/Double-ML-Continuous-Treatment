@@ -18,6 +18,7 @@ Relevant Papers/
 *.bib
 *.tex
 *.pdf
+Tuning*.py
 .Rhistory
 
 
