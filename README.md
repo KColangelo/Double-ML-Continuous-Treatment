@@ -18,8 +18,8 @@ use any of this code.
 
 To replicate the results as in Colangelo and Lee (2020):
 
-To replicate the simulation results:
-(1) Run simulation.py
+To replicate the simulation results:<br />
+(1) Run simulation.py<br />
 (2) Run simulation_results.py
 
 simulation.py runs the simulations and saves all estimates and corresponding standard errors to 
@@ -28,9 +28,9 @@ and puts them in a table of the form similar to the form used in the paper and s
 simulation.py will append to any existing simulation data in the simulations folder. If you want
 to start from scratch you must delete the excel files in the simulation folder.
 
-To replicate the empirical application:
-(1) run empirical_application.py
-(2) run partial_effects.py
+To replicate the empirical application:<br />
+(1) run empirical_application.py<br />
+(2) run partial_effects.py<br />
 (3) run graphs.py
 
 empirical_application.py reads the data and runs the estimation, and the estimates, standard errors,
@@ -44,10 +44,10 @@ used in the paper are saved as "beta.png" and "theta.png".
 Additional files are in the folder "CL2020". CL2020 was created as a module to be imported into 
 the simulation and empirical application files. Within the folder are 4 files:
 
--dgp.py defines the data generating process used in the simulations
+-dgp.py defines the data generating process used in the simulations<br />
 -estimation.py is where we define the class which describes the main estimator, defined as DDMLCT. 
- After importing CL2020, we can initialize a DDMLCT object by calling CL2020.DDMLCT(model1,model2).
--file_management.py defines a function which we use to help organize the file structure of the output
+ After importing CL2020, we can initialize a DDMLCT object by calling CL2020.DDMLCT(model1,model2).<br />
+-file_management.py defines a function which we use to help organize the file structure of the output<br />
 -models.py defines the neural network models we use in both the simulations and empirical application
 
 ## Simulation Results Files <a name"sim-names"></a>
@@ -59,6 +59,7 @@ paper, copy the values into dgp_table.xlsx.
 
 ## Empirical Application Files <a name="emp-files"></a>
 The data used is denoted "emp_app.csv"
+
 In the estimates subfolder there are 7 files. "Summary.xlsx" stores the summary statistcs we dispay
 in the paper. Every other file stores the estimates for the empirical application. File names denote
 which machine learning method was used, choice of the number of sub-samples for cross fitting (L),
