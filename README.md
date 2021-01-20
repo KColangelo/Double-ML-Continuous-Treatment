@@ -82,14 +82,14 @@ Files ending in "hstar" are generated using the optimal computed bandwidth. File
 histogram we show in the paper as histogram.png.
 
 ## Packages Used <a name="packages"></a>
-Packages and exact versions used when we generated our results:
--Numpy 1.18.1
--pandas 1.0.3
--Pytorch 1.3.1
--scikit-learn 0.22.1
--pathlib2 2.3.5
--scipy 1.4.1
--matplotlib 3.1.3
+Packages and exact versions used when we generated our results:<br />
+-Numpy 1.18.1 <br />
+-pandas 1.0.3<br />
+-Pytorch 1.3.1<br />
+-scikit-learn 0.22.1<br />
+-pathlib2 2.3.5<br />
+-scipy 1.4.1<br />
+-matplotlib 3.1.3<br />
 -pillow 7.0.0
 
 ## Additional Notes <a name="notes"></a>
