@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Mar 18 10:25:17 2020
+Last update Monday Jan 10 1:13 pm 2022
 
 This file is to be run after both "empirical_application.py" and "partial_effects.py".
 The only purpose of this file is to generate all figures used in Colangelo and Lee (2020).
@@ -23,6 +24,7 @@ import matplotlib.pyplot as plt
 import os
 from PIL import Image
 
+# We define this function to plot the confidence interval
 def plot_ci(x,y,c,title,ylab,xlab,f,ylim=[50,70],size=[4,4]):
     plt.figure(figsize=(size[0],size[1]))
     plt.plot(x, y, 'k-')
@@ -44,8 +46,8 @@ if not os.path.exists(path):
 
 ml_list = ['lasso','rf','nn']
 titles = {'lasso':'Lasso',
-          'rf':'Random Forest',
-          'nn':'Neural Network'}
+          'rf':'Generalized Random Forest',
+          'nn':'K Neural Network'}
 
 
 # The first loop iterates over all the estimates for each ml algorithm, where
@@ -142,7 +144,28 @@ for name in image_list:
     
     new_im.save((path + name + '.png'))
 
-
+path = os.getcwd() + '\\Empirical Application\\Figures\\'
+image_list = ['beta','theta']
+for name in image_list:
+    
+    images = [Image.open(x) for x in [(path + name + '_lasso.png'), 
+                                      (path + name + '_rf.png'), 
+                                      (path + name + '_nn.png')]]
+    
+    widths, heights = zip(*(i.size for i in images))
+    
+    total_width = sum(widths)
+    max_height = max(heights)
+    
+    new_im = Image.new('RGB', (total_width, max_height))
+    x_offset = 0
+    for im in images:
+      new_im.paste(im, (x_offset,0))
+      x_offset += im.size[0]
+    
+    new_im.save((path + name + '_rot.png'))
+    
+    
 # Here we generate a histogram of the GPS for neural network for t=400. This is
 # not included in the paper but was used for our own investigations.
 path = os.getcwd() + '\\Empirical Application\\Estimates\\GPS\\'

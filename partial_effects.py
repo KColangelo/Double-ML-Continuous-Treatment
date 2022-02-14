@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Mar 18 10:33:46 2020
+Last update Monday Jan 10 1:13 pm 2022
 
 This file is to be run after empirical_application.py. It's purpose is to take
 the main estimates from the empirical estimation and compute partial effects. 
@@ -14,6 +15,8 @@ import numpy as np
 import pandas as pd
 import os
 
+# This function shifts the vector of estimates so we can take differences
+# between estimates at two different t's.
 def shift(xs, gap):
     e = np.empty_like(xs)
     if gap >= 0:
@@ -24,7 +27,8 @@ def shift(xs, gap):
         e[:gap] = xs[-gap:]
     return e
 
-
+# the first loop computes estimates under optimal bandwidth. The second loop
+# computes estimates under rule of thumb bandwidth.
 ml_list = ['lasso','rf','nn']
 gap = 4
 eta = 40*gap

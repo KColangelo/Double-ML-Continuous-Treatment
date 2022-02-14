@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Sep 16 13:21:06 2019
+Last update Monday Jan 10 12:11 pm 2022
 
 This file is for taking the raw data files, which contain point estimates
 and standard deviations for each simulation, and turning them into a nice
@@ -11,11 +12,11 @@ called "output". Output is defined with hierarchical row labels for n,L and c,
 and hierarchical column names for the machine learning method, and statistic of
 interest (bias,rmse,coverage). The new table is saved in the same folder
 as the raw simulation data as "table_raw.xlsx". Additional formatting in excel is 
-necessary to reproduce the exact formatting in Colangelo and Lee (2020). the file 
+necessary to reproduce the exact formatting in Colangelo and Lee (2021). the file 
 "dgp_table.xlsx" contains the exact formatting used in the paper. Simply copy 
 values from "table_raw.xlsx" into "dgp_table.xslx" to get the exact excel formatted 
 table we use in the text. After getting the results in "dgp_table.xlsx" we use the 
-Excel2Latex addin to convert it into a latex table.
+Excel2Latex add-in to convert it into a latex table.
 
 Comments on packages used:
     -Numpy is used for reading the raw csv files, mathematical operations, and rounding
@@ -38,7 +39,7 @@ from itertools import product
 c_set = [0.5,0.75,1.0,1.25,1.5]
 n_set = [500,1000]
 L_set = [1,5]
-ml_set = ['lasso','rf','nn']
+ml_set = ['lasso','grf','knn']
 stats = ['Bias','RMSE','Coverage']
 
 # We initialize the pandas dataframe that will store information in the same
@@ -67,7 +68,7 @@ path = os.getcwd() + "\\Simulations\\"
 for group in list(product(ml_set,product(n_set,L_set,c_set))):
     name = "dgp_c" + str(group[1][2]) + "_" + group[0] + \
     "_L" + str(group[1][1]) + "_N" + str(group[1][0]) + ".csv"
-    
+    print(name)
     file = path + name
     estimates = np.genfromtxt(file, delimiter=',')
     beta_hat = estimates[:,0]
@@ -87,6 +88,6 @@ for group in list(product(ml_set,product(n_set,L_set,c_set))):
 
 # Define the name of the file to save the results to. The path is unchanged as
 # we are saving in the same folder as the other raw results. 
-name = 'table_raw2.xlsx'
+name = 'table_raw.xlsx'
 file = path + name 
 output.to_excel(file,index=True) 

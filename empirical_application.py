@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Mar 28 14:45:54 2020
+Last update Monday Jan 10 1:30 pm 2022
 
 In this file we perform the main computation for the empirical application section
-of Colangelo and Lee (2020). We start by reading in the data which we put in the 
-sub folder "Empirical Application". categorical variables are converted to dummies 
+of Colangelo and Lee (2021). We start by reading in the data which we put in the 
+sub folder "Empirical Application". Categorical variables are converted to dummies 
 and we then define our outcome Y, treatment T, and covariates X. The machine learning
 models to be used are then defined, as well as the values of t to evaluate the 
 estimator at, the initial bandwidth choice, and the choice of L for the number
@@ -19,7 +20,7 @@ the new estimated optimal bandiwidth. The main results are stored in the
 paper, we still stored them for further evaluation of the estimator. 
 
 Comments on packages used:
-    -CL2020 is the package designed specifically for this project which defines
+    -Supplement is the package designed specifically for this project which defines
     the neural network models used, and main estimator DDMLCT, and a tool we use
     for managing the file structure of the output.
     -numpy is primarily used just to stack the estimates we want into a matrix
@@ -33,18 +34,18 @@ Comments on packages used:
 
 """
 
-# Import Necessary packages.
-import CL2020
+# %% Import Necessary packages.
+import Supplement
 import numpy as np
 import pandas as pd
 from sklearn import linear_model
-from sklearn.ensemble import ExtraTreesRegressor
 import os
 import matplotlib.pyplot as plt
 
+# %% Read and Initialize Data
 path = os.getcwd() + "\\Empirical Application\\"
 directories = [path + "\\Estimates",path+"\\Estimates\\GPS"]
-CL2020.make_dirs(directories)
+Supplement.make_dirs(directories)
 
 name = 'emp_app.csv'
 file = path + name
@@ -57,12 +58,11 @@ data = pd.concat([data.select_dtypes(exclude='int64'),
                   ],
                  axis=1)
 
-#data = data[data['y']!=0]
 X = data.drop(['d','y'], axis=1)
 T = data['d']
 Y = data['y']
 
-# Create the table of summary statistics
+# %% Create the table of summary statistics
 file = path + "\\Estimates\\Summary.xlsx"
 summary_table = pd.DataFrame(index = pd.Index(['Share of Weeks Unemployed in Second Year (Y)',
                                       'Total Hours Spent in First Year Training (T)'],
@@ -74,13 +74,14 @@ summary_table.iloc[0] = [np.mean(Y),np.median(Y),np.std(Y),np.min(Y),np.max(Y)]
 summary_table.iloc[1] = [np.mean(T),np.median(T),np.std(T),np.min(T),np.max(T)]
 summary_table.to_excel(file,index=True)
 
-# Create the histogram of the treatment 
+# %% Create the histogram of the treatment 
 plt.title('Histogram of Hours of Training',fontsize=16)
 plt.xlabel('Hours of Training',fontsize=16)
 plt.ylabel('Frequency',fontsize=16)
 plt.hist(T, bins = 15, histtype='bar',ec='black', color='w')
 plt.savefig(path + '\\Figures\\histogram.png')
 
+# %% Define models and their parameters
 # Proceed very similarly to the simulation section. Define the models and then
 # use the DDMLCT class to estimate the dose-response function. 
 args_lasso1 = {
@@ -97,28 +98,14 @@ args_lasso2 = {
         'normalize':True
         }
 
-args_rf1 = {
-        'n_estimators':1000,
-        'max_depth':None,
-        'min_samples_leaf':40,
-        'min_samples_split':40
-        }
-
-args_rf2 = {
-        'n_estimators':1000,
-        'max_depth':None,
-        'min_samples_leaf':200,
-        'min_samples_split':200
-        }
-
 model_lasso1 = linear_model.Lasso(**args_lasso1)
 model_lasso2 = linear_model.Lasso(**args_lasso2)
 
-model_rf1 = ExtraTreesRegressor(**args_rf1)
-model_rf2 = ExtraTreesRegressor(**args_rf2)
+model_rf1 = Supplement.regression_forest()
+model_rf2 = Supplement.regression_forest2()
 
-model_nn1 = CL2020.NeuralNet3((139))
-model_nn2 = CL2020.NeuralNet4((138))
+model_nn1 = Supplement.NeuralNet3k((138))
+model_nn2 = Supplement.NeuralNet4((138))
 
 models = {
         'lasso': [model_lasso1, model_lasso2],
@@ -132,21 +119,26 @@ basis = {
     'nn':False
     }
 
-
-
+# %% Iterate over all t and ml algorithms for estimation
 t_list = np.arange(160,2001,40) # Set of all t we will evaluate at.
 h = np.std(T)*3*(len(Y)**(-0.2)) # Initial rule of thumb bandwidth choice
 L=5 # Number of sub-samples for cross-fitting
 ml_list = ['lasso','rf','nn'] # ml methods to be used.
 col_names = ['t','beta','se','h_star','h'] # names for everything we store from the estimation
 
+
+
 # We first iterate over every method, estimating using an initial rule of 
 # thumb bandwidth choice. The second loop performs the estimation a second time
 # using the estimated optimal bandwidth from the estimates from the initial 
 # bandwidth choice.
 for ml in ml_list:
-    model = CL2020.DDMLCT(models[ml][0],models[ml][1])
-    model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
+    if ml=='nn':
+        model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
+        model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
+    else:
+        model = Supplement.DDMLCT(models[ml][0],models[ml][1])
+        model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
     
     output = np.column_stack((np.array(t_list),model.beta,model.std_errors,
                                  np.repeat(model.h_star,len(t_list)),
@@ -172,8 +164,12 @@ for ml in ml_list:
     h = dat['h_star'][0]  
     h = (0.8*h)
     
-    model = CL2020.DDMLCT(models[ml][0],models[ml][1])
-    model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
+    if ml=='nn':
+        model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
+        model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
+    else:
+        model = Supplement.DDMLCT(models[ml][0],models[ml][1])
+        model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
     
     output = np.column_stack((np.array(t_list),model.beta,model.std_errors,
                                  np.repeat(model.h_star,len(t_list)),

@@ -11,7 +11,7 @@
 
 ## Introduction <a name="introduction"></a>
 This code was used for the simulation and empirical application
-results in Colangelo and Lee (2020). Please cite the authors appropriately if you 
+results in Colangelo and Lee (2021). Please cite the authors appropriately if you 
 use any of this code.
 
 ## How to Replicate the Results <a name="replication"></a>
@@ -41,21 +41,24 @@ graphs.py then generates graphs for all the estimates of beta and the partial ef
 used in the paper are saved as "beta.png" and "theta.png". 
 
 ## Additional Code Files <a name="additional-files"></a>
-Additional files are in the folder "CL2020". CL2020 was created as a module to be imported into 
-the simulation and empirical application files. Within the folder are 4 files:
+Additional files are in the folder "Supplement". Supplement was created as a module to be imported into 
+the simulation and empirical application files. Within the folder are 5 files:
 
 -dgp.py defines the data generating process used in the simulations<br />
 -estimation.py is where we define the class which describes the main estimator, defined as DDMLCT. 
- After importing CL2020, we can initialize a DDMLCT object by calling CL2020.DDMLCT(model1,model2).<br />
+ After importing Supplement, we can initialize a DDMLCT object by calling Supplement.DDMLCT(model1,model2).
+ We additionally define a subclass of DDMLCT called "NN_DDMLCT" which is used for
+ the new neural network implementation described in Colangelo and Lee (2021)<br />
 -file_management.py defines a function which we use to help organize the file structure of the output<br />
 -models.py defines the neural network models we use in both the simulations and empirical application. 
 For other models (lasso and random forest) we use the models form sklearn directly.
+-rgrf.py uses rpy2 to call the generalized random forest R package
 
 ## Simulation Results Files <a name="sim-names"></a>
 In the simulation folder, we save files with names that denote choice of c,n,L, and ml method.
 For example: dgp_c0.5_lasso_L1_N500.csv means this is a file corresponding the DGP in the simulations,
 with c=0.5, ml=lasso, L=1, and n=500. After these are compiled into the concise results using 
-simulation_results.py, the results are save in table_raw.xlsx. To get the exact formatting as in the
+simulation_results.py, the results are saved in table_raw.xlsx. To get the exact formatting as in the
 paper, copy the values into dgp_table.xlsx.
 
 ## Empirical Application Files <a name="emp-files"></a>
@@ -67,7 +70,7 @@ which machine learning method was used, choice of the number of sub-samples for 
 choice of c for the initial bandwidth computation, and whether the estimated optimal bandwidth was used
 for the computation. 
 For example: emp_app_lasso_c3_L5_hstar.xlsx means this is the estimates for the empirical application
-(emp_app) for lasso, with c=3 for the initial rule of thumb bandwidth chocie, and L=5, where the estimates
+(emp_app) for lasso, with c=3 for the initial rule of thumb bandwidth choice, and L=5, where the estimates
 use the estimated hstar. The estimates for the initial rule of thumb bandwidth choice are not used except
 for the purpose of estimating h_star. But the estimates are stored nonetheless.
 
@@ -92,7 +95,8 @@ Packages and exact versions used when we generated our results:<br />
 -pathlib2 2.3.5<br />
 -scipy 1.4.1<br />
 -matplotlib 3.1.3<br />
--pillow 7.0.0
+-pillow 7.0.0<br />
+-rpy2 2.9.4
 
 ## Additional Notes <a name="notes"></a>
 Additional details are included as comments within each respective file.
