@@ -13,6 +13,7 @@ import numpy as np
 import rpy2
 from rpy2.robjects.packages import importr
 import gc
+import uuid
 # Install packages for later use.
 # import rpy2's package module
 import rpy2.robjects.packages as rpackages
@@ -49,41 +50,42 @@ numpy2ri.activate()
 class regression_forest():
     def __init__(self):
         self.f = None
+        self.id = 'a'+str(uuid.uuid4()).replace("-", "_")
         # self.Rpredict = robjects.r['predict']
         # self.mat = robjects.r['as.matrix']
     def fit(self,X,Y):
         gc.collect()
         Y = Y.reshape(len(Y),1)
-        robjects.r.assign('rX',X)
-        robjects.r.assign('rY',Y)
+        robjects.r.assign(self.id+'rX',X)
+        robjects.r.assign(self.id+'rY',Y)
         self.f = robjects.r('''
-                      f = regression_forest(rX,rY, tune.parameters="all")
-                      ''')
-        self.tuning = robjects.r('''
-                      tuning = f$tunable.params
-                      ''')
-        #print(self.tuning)
+                      {i}f = regression_forest({i}rX,{i}rY, tune.parameters="all")
+                      '''.format(i=self.id))
+        # self.tuning = robjects.r('''
+        #               tuning = {i}f$tunable.params
+        #               '''.format(i=self.id))
         return self
     def predict(self,X):
         #print(type(self.Rpredict(self.f)))
         #print(1)
-        robjects.r.assign('rXp',X)
+        robjects.r.assign(self.id+'rXp',X)
         yhat = robjects.r('''
-                          pred = predict(f,rXp)$predictions
-                          ''')
+                          {i}pred = predict({i}f,{i}rXp)$predictions
+                          '''.format(i=self.id))
         yhat=np.array(yhat)
-        robjects.r('''
-                      rm(f)
-                      rm(rXp2)
-                      rm(rX2)
-                      rm(rY2)
-                      rm(pred)
-                      gc()
-                      ''')
-        gc.collect()
         #yhat = np.array(self.mat((self.Rpredict(self.f,X))))
         #print(yhat)
         return yhat
+    def clear(self):
+        robjects.r('''
+                      rm({i}f)
+                      rm({i}rX)
+                      rm({i}rY)
+                      rm({i}rXp)
+                      rm({i}pred)
+                      gc()
+                      '''.format(i=self.id))
+        gc.collect()
 
 class regression_forest2():
     def __init__(self):
@@ -98,7 +100,9 @@ class regression_forest2():
         self.f = robjects.r('''
                       g = regression_forest(rX2,rY2, tune.parameters="all")
                       ''')
-        
+        # self.tuning = robjects.r('''
+        #               tuning = g$tunable.params
+        #               ''')
         return self
     def predict(self,X):
         #print(type(self.Rpredict(self.f)))
@@ -109,7 +113,7 @@ class regression_forest2():
                           ''')
         yhat=np.array(yhat)
         robjects.r('''
-                      rm(f)
+                      rm(g)
                       rm(rXp2)
                       rm(rX2)
                       rm(rY2)

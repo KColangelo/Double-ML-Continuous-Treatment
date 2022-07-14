@@ -58,7 +58,7 @@ titles = {'lasso':'Lasso',
 # for the rule-of-thumb bandwidth choice are not shown in the paper but are 
 # for additional reference.
 ylim_beta = [30,60]
-ylim_theta = [-0.025,0.045]
+ylim_theta = [-0.042,0.06]
 for ml in ml_list:
     path = os.getcwd() + "\\Empirical Application\\Estimates\\"
     name = 'emp_app_' + str(ml) + '_c3_L5_hstar.xlsx'

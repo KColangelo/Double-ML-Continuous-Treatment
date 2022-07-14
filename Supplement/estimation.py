@@ -13,7 +13,7 @@ and one for estimation gamma. model1 is used for estimating gamma and model2 is
 used for estimation of the GPS
 
 DDMLCT saves computation time by fitting models for each value of t once for
-each fold of cross-fititng. Since the K Neural Network in Colangelo and Lee (2021) 
+each fold of cross-fititng. Since the K Neural Network in Colangelo and Lee (2022) 
 uses a unique loss which depends on t, we had to define another class "NN_DDMLCT"
 which accounts for this and fits the models for every t. Other than this adjustment,
 both classes are nearly identical.
@@ -33,6 +33,8 @@ from scipy.stats import norm
 import pandas as pd
 import copy
 import sklearn
+from scipy.optimize import minimize
+from scipy.stats import norm
 
 # This function evaluates the gaussian kernel wtih bandwidth h at point x
 def gaussian_kernel(x,h):
@@ -227,7 +229,7 @@ class DDMLCT:
                 Xt = trep
             self.fit_t(Xf,T,Y,trep,L,XT,Xt)
             
-        self.h_star = ((np.mean(self.Vt)/(4*(np.mean(self.Bt)**2)))**0.2)*(self.n**-0.2)
+        self.h_star = ((np.mean(self.Vt)/(4*(np.mean(self.Bt**2))))**0.2)*(self.n**-0.2)
     
         if standardize==True:
             self.descale()
@@ -289,6 +291,7 @@ class DDMLCT:
         self.h_star = self.h_star*self.scaling['sd_T']
         self.beta = (self.beta*self.scaling['sd_Y']) +self.scaling['mean_Y']
         self.h = self.h*self.scaling['sd_T']
+        self.Vt = self.Vt*(self.scaling['sd_Y']**2)
         
         
         
@@ -369,10 +372,87 @@ class NN_DDMLCT(DDMLCT):
         self.gps.loc[self.kept,str(trep[0])] = gps[self.kept]      
 
         
-        
+# This class is used to compute the DDMLCT estimator with alternative GPS estimation.
+# we currently do not implement this for our numerical results due to computational
+# infeasibility.        
+# optimization for later: Prevent computing of all g's every calling of ipw
+# allow user input of t_grid and epsilon.
+class DDMLCT_gps2(DDMLCT):
+    def ipw(self,Xf,g,T,t,I,I_C):
+        epsilon = 0.025
+        t_grid = np.arange(t-1.5*self.h,t+1.5*self.h,self.h/100)
+        self.model2.fit(Xf[I_C],g[I_C])
+        cdf_hat = self.model2.predict(Xf[I])
+        #print(np.std(cdf_hat))
+        cdf_hat = cdf_hat.reshape((len(cdf_hat),1))
+        cdf_hats = np.zeros((len(I),len(t_grid)))
+        for i in range(len(t_grid)):
+            trep = np.repeat(t_grid[i],self.n)
+            t_T = trep-T
+            g = norm.cdf(t_T/self.h)
+            self.model2.fit(Xf[I_C],g[I_C])
+            cdf_hats[:,i] = self.model2.predict(Xf[I])
+            cdf_hats[:,i] = self.model2.predict(Xf[I])
+        lower = np.argmin(np.abs(cdf_hats-(cdf_hat-epsilon)), axis=1)
+        upper = np.argmin(np.abs(cdf_hats-(cdf_hat+epsilon)), axis=1)
+        t_matrix = np.repeat(np.array(t_grid,ndmin=2),len(I),axis=0)
+        t_upper = t_matrix[np.arange(len(t_matrix)),list(upper)]
+        t_lower = t_matrix[np.arange(len(t_matrix)),list(lower)]
+        inverse_gps = (t_upper-t_lower)/(2*epsilon)
+        gps = 1/inverse_gps
+        return gps      
     
+    def fit_L(self,Xf,XT,Xt,Y,g,T,K,I,I_C,L,t):
+        gamma = self.naive(Xf,XT,Xt,Y,I,I_C,L)
+        gps = self.ipw(Xf,g,T,t,I,I_C)
+        self.kept = np.concatenate((self.kept,I))
         
+        # Compute the summand
+        psi = np.mean(gamma) + np.mean(((Y[I]-gamma)*(K[I]/gps)))
 
+        # Average over all indexes to get an estimate of beta hat
+        beta_hat = np.mean(psi)
+        
+        return beta_hat, gamma, gps
+    
+    def fit_t(self,Xf,T,Y,trep,L,XT,Xt):
+        
+        self.kept = np.array((),dtype=int) # used for trimming which is not currently implemented
+        
+        T_t = T-trep
+        t_T = trep-T
+        g = norm.cdf(t_T/self.h)
+        K = e_kernel(T_t,self.h) # 
+        gamma = np.zeros(self.n)
+        gps = np.zeros(self.n)
+        beta_hat = np.zeros(L)
+        
+        
+        # Iterate over all L sub-samples. I_split was defined in the fit function
+        # so that the same split is used for all choice of t. 
+        for i in range(L):
+            if L==1:
+                I = self.I_split[0]
+                I_C = self.I_split[0]
+            else:
+                I=self.I_split[i]
+                # Define the complement as the union of all other sets
+                I_C = [x for x in np.arange(self.n) if x not in I]
+                
+
+            beta_hat[i], gamma[I], gps[I] = self.fit_L(Xf,XT,Xt,Y,g,T,K,I,I_C,i,trep[0]) 
+        
+        # We now average over all sub-samples to get our estimates and standard
+        # errors. 
+        self.n = len(self.kept)
+        beta_hat = np.mean(beta_hat)
+        self.beta = np.append(self.beta,beta_hat)
+        IF =(K[self.kept]/gps[self.kept])*(Y[self.kept]-gamma[self.kept]) + gamma[self.kept] - beta_hat
+        std_error = np.sqrt((1/((self.n)**2))*np.sum(IF**2))
+        self.Bt = np.append(self.Bt,(1/(self.n*(self.h**2)))*(np.sum((K[self.kept]/gps[self.kept])*(Y[self.kept]-gamma[self.kept]))))
+        self.Vt = np.append(self.Vt,(std_error**2)*(self.n*self.h))
+        self.std_errors = np.append(self.std_errors,std_error)
+        self.gps.loc[self.kept,str(trep[0])] = gps[self.kept]
     
 
     

@@ -38,7 +38,7 @@ from itertools import product
 
 c_set = [0.5,0.75,1.0,1.25,1.5]
 n_set = [500,1000]
-L_set = [1,5]
+L_set = [1,2,5]
 ml_set = ['lasso','grf','knn']
 stats = ['Bias','RMSE','Coverage']
 

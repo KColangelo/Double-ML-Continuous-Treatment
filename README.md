@@ -11,12 +11,12 @@
 
 ## Introduction <a name="introduction"></a>
 This code was used for the simulation and empirical application
-results in Colangelo and Lee (2021). Please cite the authors appropriately if you 
+results in Colangelo and Lee (2022). Please cite the authors appropriately if you 
 use any of this code.
 
 ## How to Replicate the Results <a name="replication"></a>
 
-To replicate the results as in Colangelo and Lee (2020):
+To replicate the results as in Colangelo and Lee (2022):
 
 To replicate the simulation results:<br />
 (1) Run simulation.py<br />
@@ -48,7 +48,7 @@ the simulation and empirical application files. Within the folder are 5 files:
 -estimation.py is where we define the class which describes the main estimator, defined as DDMLCT. 
  After importing Supplement, we can initialize a DDMLCT object by calling Supplement.DDMLCT(model1,model2).
  We additionally define a subclass of DDMLCT called "NN_DDMLCT" which is used for
- the new neural network implementation described in Colangelo and Lee (2021)<br />
+ the new neural network implementation described in Colangelo and Lee (2022)<br />
 -file_management.py defines a function which we use to help organize the file structure of the output<br />
 -models.py defines the neural network models we use in both the simulations and empirical application. 
 For other models (lasso and random forest) we use the models form sklearn directly.

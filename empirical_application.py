@@ -78,7 +78,7 @@ summary_table.to_excel(file,index=True)
 plt.title('Histogram of Hours of Training',fontsize=16)
 plt.xlabel('Hours of Training',fontsize=16)
 plt.ylabel('Frequency',fontsize=16)
-plt.hist(T, bins = 15, histtype='bar',ec='black', color='w')
+plt.hist(data[data['d']<2000]['d'], bins = 15, histtype='bar',ec='black', color='w')
 plt.savefig(path + '\\Figures\\histogram.png')
 
 # %% Define models and their parameters
@@ -109,9 +109,15 @@ model_nn2 = Supplement.NeuralNet4((138))
 
 models = {
         'lasso': [model_lasso1, model_lasso2],
+        'nn': [model_nn1, model_nn2]
+        }
+
+models = {
+        'lasso': [model_lasso1, model_lasso2],
         'rf': [model_rf1, model_rf2],
         'nn': [model_nn1, model_nn2]
         }
+
 
 basis = {
     'lasso':True,
@@ -122,29 +128,42 @@ basis = {
 # %% Iterate over all t and ml algorithms for estimation
 t_list = np.arange(160,2001,40) # Set of all t we will evaluate at.
 h = np.std(T)*3*(len(Y)**(-0.2)) # Initial rule of thumb bandwidth choice
+h=2*h
 L=5 # Number of sub-samples for cross-fitting
 ml_list = ['lasso','rf','nn'] # ml methods to be used.
 col_names = ['t','beta','se','h_star','h'] # names for everything we store from the estimation
+u=0.5
 
 
-
-# We first iterate over every method, estimating using an initial rule of 
-# thumb bandwidth choice. The second loop performs the estimation a second time
-# using the estimated optimal bandwidth from the estimates from the initial 
-# bandwidth choice.
+# We first iterate over every method, estimating for bandwidth 2*h
+# where h is chosen as a rule of thumb bandwidth 3*std(T)*N^(-0.2).
+# We use the estimates from these two bandwidth choices and apply
+# the optimal bandwidth estimator in Colangelo and Lee (2022) to obtain
+# the final optimal bandwidth. The second loop then iterates over all ML
+# methods and uses the optimal bandwidth. 
 for ml in ml_list:
     if ml=='nn':
         model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
         model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
+
+        model2 = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
+        model2.fit(X,T,Y,t_list,L,h=h*u,basis=basis[ml],standardize=True)
     else:
         model = Supplement.DDMLCT(models[ml][0],models[ml][1])
         model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
+
+        model2 = Supplement.DDMLCT(models[ml][0],models[ml][1])
+        model2.fit(X,T,Y,t_list,L,h=h*u,basis=basis[ml],standardize=True)
+        
+
+    Bt = (model.beta-model2.beta)/((model.h**2)*(1-(u**2)))
+    h_star = np.mean(((model2.Vt/(4*(Bt**2)))**0.2)*(model.n**-0.2))
+    print(h_star)
     
     output = np.column_stack((np.array(t_list),model.beta,model.std_errors,
-                                 np.repeat(model.h_star,len(t_list)),
+                                 np.repeat(h_star,len(t_list)),
                                  np.repeat(model.h,len(t_list))))
     output = pd.DataFrame(output,columns=col_names)
-    
     path = os.getcwd() + "\\Empirical Application\\Estimates\\"
     name = 'emp_app_' + str(ml) + '_c3_L5.xlsx'
     file = path + name

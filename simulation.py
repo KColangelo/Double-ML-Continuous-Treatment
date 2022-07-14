@@ -140,11 +140,12 @@ basis = {
     }
 
 # %% Iterate over all t and ml algorithms for estimation
-ml_set = ['lasso','grf','rf','nn','knn'] # All machine learning algorithms
+#ml_set = ['lasso','grf','rf','nn','knn'] # All machine learning algorithms
+ml_set = ['lasso','grf','knn']
 n_set = [500,1000] # All sample sizes used
 c_set = [0.5,0.75,1.0,1.25,1.5] # All c's used for bandwidth choice
-L_set = [1,5] # All numbers of folds used for cross-fitting
-J = 1000 # Number of replications
+L_set = [2] # All numbers of folds used for cross-fitting
+J = 1000# Number of replications
 t=0 # Choice of t to estimate at.
 
 # Establish what directory the files are going to be saved in, and if it doesn't
