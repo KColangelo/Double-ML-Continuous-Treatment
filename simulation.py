@@ -167,7 +167,6 @@ Supplement.make_dirs(path)
 # c=0.5, L=1, and n=500
 for sim in list(product(range(J),n_set)):
     n = sim[1]
-    #X, T, Y = Supplement.DGP(n)
     X, T, Y = Supplement.DGP(n)
     for group in list(product(ml_set,product(L_set,c_set))):
         c = group[1][1]
@@ -200,8 +199,46 @@ for sim in list(product(range(J),n_set)):
 
 
 
+# %% If we wish to use the simulated DML version of our estimator, we can run
+# the following simulation, the only difference is that we add the argument
+# 'sdml=True'
+path = os.getcwd() + "\\Simulations_SDML\\"
+Supplement.make_dirs(path)
 
+path = os.getcwd() + "\\Simulations_SDML\\Extra_Simulations\\"
+Supplement.make_dirs(path) 
 
+for sim in list(product(range(J),n_set)):
+    n = sim[1]
+    X, T, Y = Supplement.DGP(n)
+    for group in list(product(ml_set,product(L_set,c_set))):
+        c = group[1][1]
+        ml = group[0]
+        L = group[1][0]
+        h = 0.87*c*(n**-0.2)
+        if ml=='knn':
+            model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
+            model.fit(X,T,Y,t,L=L,h=h,basis=basis[ml],standardize=False,sdml=True)
+        else:
+            model = Supplement.DDMLCT(models[ml][0],models[ml][1],sdml=True)
+            model.fit(X,T,Y,t,L=L,h=h,basis=basis[ml],standardize=False)
+        out = np.column_stack((model.beta,model.std_errors))
+        name = "dgp_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
+        
+        # Baseline rf and nn will not be saved in main folder as they are not
+        # included in the main results.
+        if ml=='rf' or ml=='nn':
+            path = os.getcwd() + "\\Simulations_SDML\\Extra_Simulations\\"
+        else:
+            path = os.getcwd() + "\\Simulations_SDML\\"
+            
+            
+        file = path + name
+        with open(file, 'ab') as f:
+            np.savetxt(f,out,delimiter=',', fmt='%f')
+    # This is an attempt to partially fix the memory leak problem but it
+    # is not sufficient.
+    gc.collect() 
 
 
 

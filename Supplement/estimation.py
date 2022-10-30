@@ -35,7 +35,7 @@ import copy
 import sklearn
 from scipy.optimize import minimize
 from scipy.stats import norm
-
+import random
 # This function evaluates the gaussian kernel wtih bandwidth h at point x
 def gaussian_kernel(x,h):
     k = (1/h)*norm.pdf((x/h),0,1)
@@ -189,8 +189,9 @@ class DDMLCT:
         
     # The only function that a user should be calling. If basis functions are 
     # used, or the data is asked to be standardized, then that is performed in this
-    # function. 
-    def fit(self,X,T,Y,t_list,L=5,h=None,basis=False,standardize=False):
+    # function. sdml argument tells whether we wish to use the simulated
+    # dml version of the estimator.
+    def fit(self,X,T,Y,t_list,L=5,h=None,basis=False,standardize=False,sdml=False):
         self.reset()
         self.naive_count = 0
         self.n = len(Y)
@@ -220,7 +221,10 @@ class DDMLCT:
             
         for t in np.array((t_list),ndmin=1):
             self.n = len(Y)
-            trep = np.repeat(t,self.n)
+            if sdml==False:
+                trep = np.repeat(t,self.n)
+            else:
+                trep = np.array(random.choices(np.array(T)*self.h + t, k = self.n))
             if basis==True:
                 Xt = self.augment(X,trep,ind)[0]
                 if standardize == True:

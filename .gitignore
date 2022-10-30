@@ -1,7 +1,7 @@
 # Don't track content of these folders
 old/
 Relevant Papers/
-
+Archive/
 
 # Miscellaneous log files and such
 *.aux
@@ -20,6 +20,9 @@ Relevant Papers/
 *.pdf
 Tuning*.py
 .Rhistory
+.spyproject
+sim_test.py
+Testing.py
 
 
 
