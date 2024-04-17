@@ -3,8 +3,10 @@ restore_data_on_startup = True
 save_data_on_exit = True
 save_history = True
 save_non_project_files = False
+project_type = 'empty-project-type'
+recent_files = ['..\\..\\.spyder-py3\\temp.py', 'simulation.py', 'Supplement\\models.py', 'Tuning Simulation.py', 'simulation_results.py', 'empirical_application.py']
 
 [main]
 version = 0.2.0
-recent_files = ['simulation.py', 'simulation_results.py', 'empirical_application.py', 'partial_effects.py', 'graphs.py', 'README.md', 'Supplement\\estimation.py']
+recent_files = ['simulation.py', 'Supplement\\estimation.py', 'simulation_results.py', 'empirical_application.py', 'partial_effects.py', 'graphs.py', 'Supplement\\models.py']
 

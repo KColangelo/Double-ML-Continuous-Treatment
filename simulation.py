@@ -1,40 +1,39 @@
 """
 Created on Fri Mar 27 22:12:26 2020
-Last update Monday Jan 10 12:26 pm 2022
+Last update Sunday Oct 27 11:02 am 2023
 
 This file is for running the main simulation results. Estimates and standard
 errors for each simulation are saved in multiple files. We begin by defining the 
 parameters used for lasso and generalized random forest, and then create all of the machine
 learning models we use. Models ending in '1' are used for the estimation of gamma. 
 Models ending in "2" are used for the estimation of the generalized propensity 
-score. Random forest is typically abbreviated with "rf",neural network is 
+score.Random forest is typically abbreviated with "rf",neural network is 
 typicall abbreviated with "nn", generalized random forest is abbreviated as 
-"grf", and the neural network proposed in Colangelo and Lee (2021) is 
-abbreviated as "knn", short for "K Neural Network", in the code.
+"grf", and the neural network proposed in Colangelo and Lee (2023) is 
+abbreviated as "knn", short for "Kernel Neural Network", in the code.
 
 List of algorithms: ml_list = ['lasso','grf','rf','nn','knn']
-Sample sizez: n_list = [500,1000]
+Sample sizez: n_list = [1000,10000]
 number of sub samples for cross-fitting: L_list = [1,5]
 number of repetitions: J=1000
-coefficient for rule of thumb bandwidth: c_list = [0.5,0.75,1.0,1.25,1.5]
+coefficient for rule of thumb bandwidth: c_list = [0.75,1.0,1.25,1.5]
 
-The numerical results of the paper focus on lasso, grf, and knn. Previous
-versions of the paper focused on regular random forests and neural networks. 
+The numerical results of the paper focus on lasso, and nn. Previous
+versions of the paper focused on rf, knn, and grf. 
 We left these in the code, and the results are saved to a separate folder 
 "Extra_Simulations" for our own reference.
 
 Files are created for each combination of machine learning method, n, L, and c.
 Models for random forest and lasso are from sklearn. Neural networks use pytorch.
 The neural networks used are defined in /Supplement/models.py, including the 
-K Neural Network. The data generating
-process used is defined in /Supplement/DGP.py.Estimation is carried out using the
-estimator defined in /Supplement/estimation.py as the class DDMLCT. An instance
-of the class is initialized with 2 models, the first for the estimation of 
-gamma and the second for the estimation of the generalized propensity score.
-The .fit method takes arguments for covariates X, treatment T, outcome Y,
-bandwidth choice h, choice of t to estimate the dose response function at, 
-choice of the number of sub-samples for cross-fitting (L), whether or not to 
-use the added basis functions, and whether to standardize the data.
+knn. The data generating process used is defined in /Supplement/DGP.py.
+Estimation is carried out using the estimator defined in /Supplement/estimation.py 
+as the class DDMLCT. An instance of the class is initialized with 2 models, 
+the first for the estimation of gamma and the second for the estimation of 
+the generalized propensity score. The .fit method takes arguments for covariates X, 
+treatment T, outcome Y, bandwidth choice h, choice of t to estimate the dose 
+response function at, choice of the number of sub-samples for cross-fitting (L), 
+whether or not to use the added basis functions, and whether to standardize the data.
 
 The generalized random forest implementation uses the R package, and utilizes
 Rpy2 to use the R package in Python. There is a known issue in our code with
@@ -42,7 +41,9 @@ this implementation in that there is a memory leak. After a large number of
 simulations which estimate the generalized random forest, the memory usage
 increases until the program eventually crashes. We have not found a fix for 
 this memory leak issue yet, so please contact us if you figure out how to fix
-it. 
+it. There is now a grf implementation in Python, however we have not updated
+our code to use it. At the time we originally tried grf, this package was not
+available.
 
 If the code is terminated while running, the simulations up until that point 
 should be saved, and can be continued by starting the code again.
@@ -68,65 +69,137 @@ from sklearn.ensemble import ExtraTreesRegressor
 import os
 from itertools import product
 import gc
-
-# %% Define necessary parameters for ML algorithms. 
-args_lasso1 = {
-        'alpha':0.00418519,
+import tracemalloc
+# %% Define necessary parameters for ML algorithms. These were tuned via cross
+# fitting. Code related to this is in the file "Tuning Simulation.py". The code
+# in the tuning file is however not "streamlined" and does take some manual
+# tinkering to do the tuning. We use different hyperparameters for each 
+# sample size. 
+args_lasso1_n1000 = {
+        'alpha':0.00534454178,
         'max_iter':5000,
         'normalize':True,
         'tol':0.001
         }
 
-args_lasso2 = {
+args_lasso2_n1000 = {
         'alpha':0.00281957,
         'max_iter':5000,
         'normalize':True,
         'tol':0.001
         }
 
-args_rf1 = {
-        'n_estimators':1000,
-        'max_depth':None,
-        'min_samples_leaf':40,
-        'min_samples_split':40
+args_lasso1_n10000 = {
+        'alpha':0.00022478146902344708,
+        'max_iter':5000,
+        'normalize':True,
+        'tol':0.001
         }
 
-args_rf2 = {
-        'n_estimators':1000,
-        'max_depth':None,
-        'min_samples_leaf':40,
-        'min_samples_split':40
+args_lasso2_n10000 = {
+        'alpha':0.00019551412581822255,
+        'max_iter':5000,
+        'normalize':True,
+        'tol':0.001
         }
+
+# Define parameters for random forest. Currently this is commented out as the
+# present version of the paper does not use random forest in the simulation
+# results. 
+# args_rf1 = {
+#         'n_estimators':1000,
+#         'max_depth':None,
+#         'min_samples_leaf':40,
+#         'min_samples_split':40
+#         }
+
+# args_rf2 = {
+#         'n_estimators':1000,
+#         'max_depth':None,
+#         'min_samples_leaf':40,
+#         'min_samples_split':40
+#         }
 
 # %% Define the models we will be using with the specified parameters
-model_lasso1 = linear_model.Lasso(**args_lasso1)
-model_lasso2 = linear_model.Lasso(**args_lasso2)
+model_lasso1_n10000 = linear_model.Lasso(**args_lasso1_n10000)
+model_lasso2_n10000 = linear_model.Lasso(**args_lasso2_n10000)
+model_lasso1_n1000 = linear_model.Lasso(**args_lasso1_n1000)
+model_lasso2_n1000 = linear_model.Lasso(**args_lasso2_n1000)
 
-model_grf1 = Supplement.regression_forest()
-model_grf2 = Supplement.regression_forest2()
+# Define the generalized random forest models. Not currently used in paper so
+# commented out.
+# model_grf1 = Supplement.regression_forest()
+# model_grf2 = Supplement.regression_forest2()
 
-model_rf1 = ExtraTreesRegressor(**args_rf1)
-model_rf2 = ExtraTreesRegressor(**args_rf2)
+# Define random forest models. Not currently used in paper so commented out.
+# model_rf1 = ExtraTreesRegressor(**args_rf1)
+# model_rf2 = ExtraTreesRegressor(**args_rf2)
 
 # For the neural networks we need to specify the number of covariates.
 # we have 100 X variables and one treatment. The Second stage of the regular
 # neural network takes treatment as an input, hence "101". But the knn does
 # not take treatment as an input, hence why its second stage has "100". The
-# First stage regresses T on X, hence we do not do the K neural network.
-model_nn1 = Supplement.NeuralNet1(101) 
-model_nn2 = Supplement.NeuralNet2(100)
+# First stage regresses T on X, hence we do not do the knn. Learning rate
+# and related parameters are tuned in "Tuning Simulation.py". 
+model_nn1_n10000 = Supplement.NeuralNet1_n10000(k=101, 
+                                  lr=0.05,
+                                  momentum=0.95,
+                                  epochs=100,
+                                  weight_decay=0.05) 
+model_nn2_n10000 = Supplement.NeuralNet2_n10000(k=100, 
+                                  lr=0.4,
+                                  momentum = 0.0, 
+                                  epochs=100,
+                                  weight_decay=0.075)
 
-model_knn1 = Supplement.NeuralNet1k(100)
-model_knn2 = Supplement.NeuralNet2(100) 
+model_nn1_n1000 = Supplement.NeuralNet1_n1000(k=101, 
+                                  lr=0.01,
+                                  momentum=0.9,
+                                  epochs=100,
+                                  weight_decay=0.05) 
+
+model_nn2_n1000 = Supplement.NeuralNet2_n1000(k=100, 
+                                  lr=0.01,
+                                  momentum = 0.9, 
+                                  epochs=100,
+                                  weight_decay=0.3)
+
+model_knn1_n10000 = Supplement.NeuralNet1k_n10000(k=100, 
+                                  lr=0.05,
+                                  momentum = 0.9,
+                                  epochs=100,
+                                  weight_decay=0.1)
+
+model_knn2_n10000 = Supplement.NeuralNet2_n10000(k=100, 
+                                  lr=0.4,
+                                  momentum = 0.0, 
+                                  epochs=100,
+                                  weight_decay=0.075)
+
+model_knn1_n1000 = Supplement.NeuralNet1k_n1000(k=100, 
+                                  lr=0.01,
+                                  momentum=0.9,
+                                  epochs=100,
+                                  weight_decay=0.05) 
+
+model_knn2_n1000 = Supplement.NeuralNet2_n1000(k=100, 
+                                  lr=0.01,
+                                  momentum = 0.9, 
+                                  epochs=100,
+                                  weight_decay=0.3)
+
 
 # I collect the models into a dictionary so that they can be easily iterated over
+# for estimation.
 models = {
-        'lasso': [model_lasso1, model_lasso2],
-        'grf': [model_grf1, model_grf2],
-        'rf': [model_rf1,model_rf2],
-        'nn': [model_nn1, model_nn2],
-        'knn': [model_knn1, model_knn2]
+        'lasso': {'1000':[model_lasso1_n1000, model_lasso2_n1000], 
+                  '10000':[model_lasso1_n10000, model_lasso2_n10000]},
+        'nn': {'1000':[model_nn1_n1000, model_nn2_n1000], 
+                  '10000':[model_nn1_n10000, model_nn2_n10000]},
+        'knn': {'1000':[model_knn1_n1000, model_knn2_n1000], 
+                  '10000':[model_knn1_n10000, model_knn2_n10000]}
         }
+
 
 # This dictionary defines which ml methods uses added basis functions and which
 # do not. An option is included in the fit method of DDMLCT to generate the 
@@ -140,17 +213,18 @@ basis = {
     }
 
 # %% Iterate over all t and ml algorithms for estimation
-#ml_set = ['lasso','grf','rf','nn','knn'] # All machine learning algorithms
-ml_set = ['lasso','grf','knn']
-n_set = [500,1000] # All sample sizes used
-c_set = [0.5,0.75,1.0,1.25,1.5] # All c's used for bandwidth choice
-L_set = [2] # All numbers of folds used for cross-fitting
+# Define all the sets of parameters that we will create estimates for. That is,
+# define which sets of N, c, L and ML algorithms will be used for our results.
+ml_set = ['lasso','nn','knn']
+n_set = [1000,10000] # All sample sizes used
+c_set = [0.75,1.0,1.25,1.5] # All c's used for bandwidth choice
+L_set = [1,5] # All numbers of folds used for cross-fitting
 J = 1000# Number of replications
 t=0 # Choice of t to estimate at.
 
-# Establish what directory the files are going to be saved in, and if it doesn't
-# exist, then the directory is to be created by the make_dirs function which
-# we define in Supplement/file_management.py. 
+
+# These are the directories we store results to. If the directories don't exist
+# when this code is run, then they are created. 
 path = os.getcwd() + "\\Simulations\\"
 Supplement.make_dirs(path)
 
@@ -163,94 +237,163 @@ Supplement.make_dirs(path)
 # and for this reason we had to use 2 loops. The inner loop iterates over ml
 # method, choice of c and choice of L. Files are saved with a particular naming
 # convention to describe what n,L,c and ml method they correspond to.
-# Example: "dgp_c0.5_lasso_L1_N500.csv" means this is a file for lasso, with
-# c=0.5, L=1, and n=500
+# Example: "dgp2_c0.5_lasso_L1_N500.csv" means this is a file for lasso, with
+# c=0.5, L=1, and n=500, and for DGP2. The numbering of the DGP is not present
+# in the paper, but is left in the code as we had been experimenting with different
+# DGP definitions before settling on what we termed "DGP2."
+
+# tracemalloc.start() This was used previously to diagnose memory leak issues. 
 for sim in list(product(range(J),n_set)):
     n = sim[1]
-    X, T, Y = Supplement.DGP(n)
+    # We experimented with multiple DGPs before aligning on using "DGP2". It
+    # is not referred to by number in the paper, but we had considered 3 different
+    # DGPs, and you can view their definitions in the Supplment.dgp.py file.
+    # DPG2 was chosen as it incorporated a more non-linear relationship in the 
+    # data while not looking too "pathological."
+    X, T, Y = Supplement.DGP2(n) 
     for group in list(product(ml_set,product(L_set,c_set))):
         c = group[1][1]
         ml = group[0]
         L = group[1][0]
-        h = 0.87*c*(n**-0.2)
+        h = np.std(T)*c*(n**-0.2) # rule of thumb bandwidth. 
+        # eta defines how far around t=0 we go to estimate theta.
+        eta =  h*(n**(-(1/6)))
+        # We need to compute the estimator at three values of t in order to compute
+        # both beta and theta at t=0. This is because theta needs to take the difference
+        # between betas at either side of t=0. 
+        t_list = np.array([0,-(eta/2),(eta/2)]) 
+        #start_time = time.time()
         if ml=='knn':
-            model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
-            model.fit(X,T,Y,t,L=L,h=h,basis=basis[ml],standardize=False)
+            model = Supplement.NN_DDMLCT(models[ml][str(n)][0],models[ml][str(n)][1])
+            model.fit(X,T,Y,t_list,L=L,h=h,basis=basis[ml],standardize=False)
+            beta = model.beta
+            std_error = model.std_errors
+
+            partial_effect = (beta[2]-beta[1])/eta
+            partial_effect_std = ((np.sqrt(15/6)/h)*std_error[0])
+
         else:
-            model = Supplement.DDMLCT(models[ml][0],models[ml][1])
-            model.fit(X,T,Y,t,L=L,h=h,basis=basis[ml],standardize=False)
-        out = np.column_stack((model.beta,model.std_errors))
-        name = "dgp_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
+            model = Supplement.DDMLCT(models[ml][str(n)][0],models[ml][str(n)][1])
+            model.fit(X,T,Y,t_list,L=L,h=h,basis=basis[ml],standardize=False)
+            beta = model.beta
+            std_error = model.std_errors
+
+            partial_effect = (beta[2]-beta[1])/eta
+            partial_effect_std = ((np.sqrt(5/2)/h)*std_error[0])
+
+
+        out = np.column_stack((beta[0],std_error[0],partial_effect,partial_effect_std))
+        name = "dgp2" + "_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
         
         # Baseline rf and nn will not be saved in main folder as they are not
         # included in the main results.
-        if ml=='rf' or ml=='nn':
-            path = os.getcwd() + "\\Simulations\\Extra_Simulations\\"
+        if ml=='rf' or ml=='knn' or ml=='grf':
+            path = os.getcwd() + "\\Simulations\\Extra_Simulations\\" 
         else:
             path = os.getcwd() + "\\Simulations\\"
-            
-            
+
         file = path + name
         with open(file, 'ab') as f:
             np.savetxt(f,out,delimiter=',', fmt='%f')
     # This is an attempt to partially fix the memory leak problem but it
     # is not sufficient.
-    gc.collect() 
+    gc.collect() # This was used as there was a tendency for memory leakage.
+# %% We define this second segment of code for estimating using simulated dml
+# and DML using our Re-GPS estimator for the GPS.
+# We only use lasso for this section due to computational issues of Re-GPS.
+ml_set = ['lasso']
+n_set = [1000,10000] # All sample sizes used
+c_set = [.75,1.0,1.25,1.5] # All c's used for bandwidth choice
+L_set = [1,5] # All numbers of folds used for cross-fitting
+J = 1000 # Number of replications
+t=0 # Choice of t to estimate at.
 
 
-
-# %% If we wish to use the simulated DML version of our estimator, we can run
-# the following simulation, the only difference is that we add the argument
-# 'sdml=True'
-path = os.getcwd() + "\\Simulations_SDML\\"
-Supplement.make_dirs(path)
-
-path = os.getcwd() + "\\Simulations_SDML\\Extra_Simulations\\"
-Supplement.make_dirs(path) 
-
+# The outer loop iterates over every combination of sample size n and replication
+# number. We only generate the data with respect to n and replication number,
+# and for this reason we had to use 2 loops. The inner loop iterates over ml
+# method, choice of c and choice of L. Files are saved with a particular naming
+# convention to describe what n,L,c and ml method they correspond to.
+# Example: "dgp_c0.5_lasso_L1_N500.csv" means this is a file for lasso, with
+# c=0.5, L=1, and n=500
+partial_list = []
+beta_list = []
+tracemalloc.start()
 for sim in list(product(range(J),n_set)):
     n = sim[1]
-    X, T, Y = Supplement.DGP(n)
+    X, T, Y = Supplement.DGP2(n)
     for group in list(product(ml_set,product(L_set,c_set))):
         c = group[1][1]
         ml = group[0]
-        L = group[1][0]
-        h = 0.87*c*(n**-0.2)
-        if ml=='knn':
-            model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
-            model.fit(X,T,Y,t,L=L,h=h,basis=basis[ml],standardize=False,sdml=True)
-        else:
-            model = Supplement.DDMLCT(models[ml][0],models[ml][1],sdml=True)
-            model.fit(X,T,Y,t,L=L,h=h,basis=basis[ml],standardize=False)
-        out = np.column_stack((model.beta,model.std_errors))
-        name = "dgp_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
         
+        L = group[1][0]
+        h = np.std(T)*c*(n**-0.2)
+        eta =  h*(n**(-(1/6)))
+        
+        t_list = np.array([0,-(eta/2),(eta/2)])
+
+        model = Supplement.DDMLCT(models[ml][str(n)][0],models[ml][str(n)][1])
+        model.fit(X,T,Y,t_list,L=L,h=h,basis=basis[ml],standardize=False,sdml=True)
+        beta = model.beta
+        std_error = model.std_errors
+        #print(beta)
+        partial_effect = (beta[2]-beta[1])/eta
+        partial_effect_std = ((np.sqrt(5/2)/h)*std_error[0])
+        #print(time.time()-start_time)
+        beta_list.append(beta)
+        partial_list.append(partial_effect)
+        #print(sim[0])
+        out = np.column_stack((beta[0],std_error[0],partial_effect,partial_effect_std))
+        name = "dgp2" + "_sdml" + "_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
+
         # Baseline rf and nn will not be saved in main folder as they are not
         # included in the main results.
-        if ml=='rf' or ml=='nn':
-            path = os.getcwd() + "\\Simulations_SDML\\Extra_Simulations\\"
-        else:
-            path = os.getcwd() + "\\Simulations_SDML\\"
+        path = os.getcwd() + "\\Simulations\\"
             
-            
+
         file = path + name
         with open(file, 'ab') as f:
             np.savetxt(f,out,delimiter=',', fmt='%f')
-    # This is an attempt to partially fix the memory leak problem but it
-    # is not sufficient.
-    gc.collect() 
+            
+            
+        model = Supplement.DDMLCT_gps2(models[ml][str(n)][0],models[ml][str(n)][1])
+        model.fit(X,T,Y,t_list,L=L,h=h,basis=basis[ml],standardize=False,sdml=False)
+        beta = model.beta
+        std_error = model.std_errors
+
+        partial_effect = (beta[2]-beta[1])/eta
+        partial_effect_std = ((np.sqrt(5/2)/h)*std_error[0])
+        #print(time.time()-start_time)
+        beta_list.append(beta)
+        partial_list.append(partial_effect)
+        print(sim[0])
+        out = np.column_stack((beta[0],std_error[0],partial_effect,partial_effect_std))
+        name = "dgp2" + "_regps" + "_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
+
+        # Baseline rf and nn will not be saved in main folder as they are not
+        # included in the main results.
+        path = os.getcwd() + "\\Simulations\\"
+            
+
+        file = path + name
+        with open(file, 'ab') as f:
+            np.savetxt(f,out,delimiter=',', fmt='%f')
+
+    gc.collect()
 
 
+# Below was used to trace memory allocation. Under previous versions of the code
+# we had memory errors that needed to be fixed. We have left the code here commented
+# in case we need to use again in future iterations. 
+# snapshot = tracemalloc.take_snapshot()
+# top_stats = snapshot.statistics('lineno')
 
 
+# print("[ Top 10 ]")
+# for stat in top_stats[:10]:
+#     print(stat)
 
-
-
-
-
-
-
-
+           
 
 
 

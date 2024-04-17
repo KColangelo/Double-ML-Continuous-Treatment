@@ -11,12 +11,12 @@
 
 ## Introduction <a name="introduction"></a>
 This code was used for the simulation and empirical application
-results in Colangelo and Lee (2022). Please cite the authors appropriately if you 
+results in Colangelo and Lee (2023). Please cite the authors appropriately if you 
 use any of this code.
 
 ## How to Replicate the Results <a name="replication"></a>
 
-To replicate the results as in Colangelo and Lee (2022):
+To replicate the results as in Colangelo and Lee (2023):
 
 To replicate the simulation results:<br />
 (1) Run simulation.py<br />
@@ -33,46 +33,51 @@ To replicate the empirical application:<br />
 (2) Run partial_effects.py<br />
 (3) Run graphs.py
 
-empirical_application.py reads the data and runs the estimation, and the estimates, standard errors,
+empirical_application.py reads the data and runs the estimation. The estimates, standard errors,
 bandwidth information and gps estimates are saved for each ml method (for both the initial choice of
 bandwidth and the estimated optimal bandwidth). partial_effects.py then takes the saved estimates and
 computes the partial effects as we did in the paper and resaves each file with the additional information.
 graphs.py then generates graphs for all the estimates of beta and the partial effects. The graphs
-used in the paper are saved as "beta.png" and "theta.png". 
+used in the paper are saved as for example "beta_lasso_hstar.png" and "theta_lasso_hstar.png". 
+We save graphs for both h and h_star for reference, but the paper only presents graphs
+for h_star, which are denoted as such in their file names. 
 
 ## Additional Code Files <a name="additional-files"></a>
 Additional files are in the folder "Supplement". Supplement was created as a module to be imported into 
 the simulation and empirical application files. Within the folder are 5 files:
 
--dgp.py defines the data generating process used in the simulations<br />
+-dgp.py defines the data generating process used in the simulations. It also contains
+other DGPs we had experimented with in the past. <br />
 -estimation.py is where we define the class which describes the main estimator, defined as DDMLCT. 
  After importing Supplement, we can initialize a DDMLCT object by calling Supplement.DDMLCT(model1,model2).
  We additionally define a subclass of DDMLCT called "NN_DDMLCT" which is used for
- the new neural network implementation described in Colangelo and Lee (2022)<br />
+ the new neural network implementation described in Colangelo and Lee (2023). We also
+ define a subclass DDMLCT_gps2 which implements the estimator using ReGPS. <br />
 -file_management.py defines a function which we use to help organize the file structure of the output<br />
 -models.py defines the neural network models we use in both the simulations and empirical application. 
 For other models (lasso and random forest) we use the models form sklearn directly.
--rgrf.py uses rpy2 to call the generalized random forest R package
+-rgrf.py uses rpy2 to call the generalized random forest R package. 
 
 ## Simulation Results Files <a name="sim-names"></a>
 In the simulation folder, we save files with names that denote choice of c,n,L, and ml method.
-For example: dgp_c0.5_lasso_L1_N500.csv means this is a file corresponding the DGP in the simulations,
-with c=0.5, ml=lasso, L=1, and n=500. After these are compiled into the concise results using 
-simulation_results.py, the results are saved in table_raw.xlsx. To get the exact formatting as in the
-paper, copy the values into dgp_table.xlsx.
+For example: dgp2_c0.5_lasso_L1_N500.csv means this is a file corresponding to the DGP 
+in the simulations, with c=0.5, ml=lasso, L=1, and n=500. After these are compiled 
+into the concise results using simulation_results.py, the results are saved in 
+dgp2_table_raw.xlsx. To get the exact formatting as in the paper, copy the values into dgp2_table.xlsx.
 
 ## Empirical Application Files <a name="emp-files"></a>
-The data used is denoted "emp_app.csv"
+The input data used is denoted "emp_app.csv"
 
 In the estimates subfolder there are 7 files. "Summary.xlsx" stores the summary statistcs we dispay
 in the paper. Every other file stores the estimates for the empirical application. File names denote
 which machine learning method was used, choice of the number of sub-samples for cross fitting (L),
 choice of c for the initial bandwidth computation, and whether the estimated optimal bandwidth was used
 for the computation. 
-For example: emp_app_lasso_c3_L5_hstar.xlsx means this is the estimates for the empirical application
-(emp_app) for lasso, with c=3 for the initial rule of thumb bandwidth choice, and L=5, where the estimates
-use the estimated hstar. The estimates for the initial rule of thumb bandwidth choice are not used except
-for the purpose of estimating h_star. But the estimates are stored nonetheless.
+For example: emp_app_lasso_c3_L5_hstar.xlsx means these are the estimates for the empirical application
+(emp_app) for lasso, with c=3 for the estimated optimal bandwidth choice (hstar), 
+and L=5, where the estimates use the estimated hstar. The estimates for the 
+initial rule of thumb bandwidth choice are not used except for the purpose of 
+estimating h_star. But the estimates are stored nonetheless.
 
 The sub-folder "GPS" stores the GPS estimates for each method, with and without the use of the estimated
 h-star. These estimates are not used in the paper but were used for our own investigations. Again, files
@@ -82,9 +87,8 @@ are from when the rule of thumb bandwidth is used.
 In the figures sub-folder: Each figure for each ml method is saved separately. 
 For example: "beta_lasso.png" stores the figure for the estiamted dose-response function for lasso.
 Files ending in "hstar" are generated using the optimal computed bandwidth. Files not ending in 
-"hstar" corresond to the initial bandwidth. The combined figures used in the paper are named
-"beta.png" for the dose-response function and "theta.png" for the partial effects. We also save the
-histogram we show in the paper as histogram.png.
+"hstar" corresond to the initial bandwidth. We also save the histogram we 
+show in the paper as histogram.png.
 
 ## Packages Used <a name="packages"></a>
 Packages and exact versions used when we generated our results:<br />

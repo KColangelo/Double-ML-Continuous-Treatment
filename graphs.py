@@ -4,7 +4,7 @@ Created on Wed Mar 18 10:25:17 2020
 Last update Monday Jan 10 1:13 pm 2022
 
 This file is to be run after both "empirical_application.py" and "partial_effects.py".
-The only purpose of this file is to generate all figures used in Colangelo and Lee (2020).
+The only purpose of this file is to generate all figures used in Colangelo and Lee (2023).
 The function "plot_ci" was defined to easily plot the confidence interval for a 
 range of t. 
 
@@ -25,7 +25,7 @@ import os
 from PIL import Image
 
 # We define this function to plot the confidence interval
-def plot_ci(x,y,c,title,ylab,xlab,f,ylim=[50,70],size=[4,4]):
+def plot_ci(x,y,c,title,ylab,xlab,f,ylim=[50,70],size=[4,4],xlim=None):
     plt.figure(figsize=(size[0],size[1]))
     plt.plot(x, y, 'k-')
     plt.plot(x, y-c, '--')
@@ -34,6 +34,8 @@ def plot_ci(x,y,c,title,ylab,xlab,f,ylim=[50,70],size=[4,4]):
     plt.ylabel(ylab)
     plt.xlabel(xlab)
     plt.ylim(ylim[0],ylim[1])
+    if xlim is not None:
+        plt.xlim(xlim[0],xlim[1])
     plt.tight_layout()
     plt.savefig(f)
     
@@ -44,10 +46,11 @@ if not os.path.exists(path):
     os.makedirs(path)
     
 
-ml_list = ['lasso','rf','nn']
+ml_list = ['lasso','rf','nn','knn']
 titles = {'lasso':'Lasso',
           'rf':'Generalized Random Forest',
-          'nn':'K Neural Network'}
+          'nn':'Neural Network',
+          'knn': 'Kernel Neural Network'}
 
 
 # The first loop iterates over all the estimates for each ml algorithm, where
@@ -58,7 +61,9 @@ titles = {'lasso':'Lasso',
 # for the rule-of-thumb bandwidth choice are not shown in the paper but are 
 # for additional reference.
 ylim_beta = [30,60]
-ylim_theta = [-0.042,0.06]
+ylim_theta = [-0.052,0.07]
+xlim = [300,1860]
+
 for ml in ml_list:
     path = os.getcwd() + "\\Empirical Application\\Estimates\\"
     name = 'emp_app_' + str(ml) + '_c3_L5_hstar.xlsx'
@@ -68,6 +73,7 @@ for ml in ml_list:
     
     # Filenames to save figures for both beta and theta(partial effect)
     path = os.getcwd() + "\\Empirical Application\\Figures\\"
+    
     name = 'beta_' + str(ml) + '_hstar.png'
     f = path + name
     c = 1.96*dat['se']
@@ -75,7 +81,7 @@ for ml in ml_list:
     ylab = '% of Employment'
     xlab = 'Hours in Training'
     size=[4,4]
-    plot_ci(dat['t'],dat['beta'],c,title,ylab,xlab,f,ylim=ylim_beta,size=size)
+    plot_ci(dat['t'],dat['beta'],c,title,ylab,xlab,f,ylim=ylim_beta,xlim=xlim,size=size)
     
     
     name = 'theta_' + str(ml) + '_hstar.png'
@@ -85,7 +91,7 @@ for ml in ml_list:
     ylab = 'Partial Effect'
     xlab = 'Hours in Training'
     size=[4,4]
-    plot_ci(dat['t'],dat['partial effect'],c,title,ylab,xlab,f,ylim=ylim_theta,size=size)
+    plot_ci(dat['t'],dat['partial effect'],c,title,ylab,xlab,f,ylim=ylim_theta,xlim=xlim,size=size)
     
 
 for ml in ml_list:
@@ -104,7 +110,7 @@ for ml in ml_list:
     ylab = '% of Employment'
     xlab = 'Hours in Training'
     size=[4,4]
-    plot_ci(dat['t'],dat['beta'],c,title,ylab,xlab,f,ylim=ylim_beta,size=size)
+    plot_ci(dat['t'],dat['beta'],c,title,ylab,xlab,f,ylim=ylim_beta,xlim=xlim,size=size)
     
     
     
@@ -116,7 +122,7 @@ for ml in ml_list:
     ylab = 'Partial Effect'
     xlab = 'Hours in Training'
     size=[4,4]
-    plot_ci(dat['t'],dat['partial effect'],c,title,ylab,xlab,f,ylim=ylim_theta,size=size)
+    plot_ci(dat['t'],dat['partial effect'],c,title,ylab,xlab,f,ylim=ylim_theta,xlim=xlim,size=size)
     
 
 

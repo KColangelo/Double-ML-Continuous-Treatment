@@ -29,7 +29,7 @@ def shift(xs, gap):
 
 # the first loop computes estimates under optimal bandwidth. The second loop
 # computes estimates under rule of thumb bandwidth.
-ml_list = ['lasso','rf','nn']
+ml_list = ['lasso','rf','nn','knn']
 gap = 4
 eta = 40*gap
 for ml in ml_list:
@@ -38,9 +38,8 @@ for ml in ml_list:
     file = path + name
     dat = pd.read_excel(file)
     h = dat['h'][0]
-    dat['partial effect'] = (dat['beta']-shift(dat['beta'],gap))/eta
+    dat['partial effect'] = (shift(dat['beta'],-gap)-shift(dat['beta'],gap))/eta
     dat['se partial effect'] = ((np.sqrt(15/6)/h)*dat['se'])
-
     dat.to_excel(file,index=False)
 
 
@@ -50,7 +49,7 @@ for ml in ml_list:
     file = path + name
     dat = pd.read_excel(file)
     h = dat['h'][0]
-    dat['partial effect'] = (dat['beta']-shift(dat['beta'],gap))/eta
+    dat['partial effect'] = (shift(dat['beta'],-gap)-shift(dat['beta'],gap))/eta
     dat['se partial effect'] = ((np.sqrt(15/6)/h)*dat['se'])
 
     dat.to_excel(file,index=False)

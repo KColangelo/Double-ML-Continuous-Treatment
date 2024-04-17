@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Mar 28 14:45:54 2020
-Last update Monday Jan 10 1:30 pm 2022
+Last update Sunday Oct 27 10:35 am 2023
 
 In this file we perform the main computation for the empirical application section
-of Colangelo and Lee (2021). We start by reading in the data which we put in the 
+of Colangelo and Lee (2023). We start by reading in the data which we put in the 
 sub folder "Empirical Application". Categorical variables are converted to dummies 
 and we then define our outcome Y, treatment T, and covariates X. The machine learning
 models to be used are then defined, as well as the values of t to evaluate the 
 estimator at, the initial bandwidth choice, and the choice of L for the number
-of sub-samples used for cross-fitting. We then loop over all 3 machine learning
-methods and create a model using DDMLCT and fit the model on the data. basis functions
-are only used for lasso, so this parameter is set to True only for lasso. After
-an initial estimation with the initial bandwidth, the DDMLCT model object stores
-and estimate of h_star. This h_star is then used in a successive estimation with
-the new estimated optimal bandiwidth. The main results are stored in the 
-"/empirical application/estimates" folder. GPS estimates are stored in 
-"/empirical application/GPS". Although the GPS estimates are not referenced in the
-paper, we still stored them for further evaluation of the estimator. 
+of sub-samples used for cross-fitting. We then loop over 4 machine learning
+methods (lasso, generalized random forest, neural networks, and our newly
+defined kernel neural network) and create a model using DDMLCT and fit the model 
+on the data. basis functions are only used for lasso, so this parameter is set 
+to True only for lasso. After an initial estimation with the initial bandwidth, 
+the DDMLCT model object stores an estimate of h_star. This h_star is then used 
+in a successive estimation with the new estimated optimal bandiwidth. The main 
+results are stored in the "/empirical application/estimates" folder. GPS estimates
+are stored in "/empirical application/GPS". Although the GPS estimates are not 
+referenced in the paper, we still stored them for our own diagnostic purposes. 
 
 Comments on packages used:
     -Supplement is the package designed specifically for this project which defines
@@ -58,9 +59,9 @@ data = pd.concat([data.select_dtypes(exclude='int64'),
                   ],
                  axis=1)
 
-X = data.drop(['d','y'], axis=1)
-T = data['d']
-Y = data['y']
+X = data.drop(['d','y'], axis=1) #define covariate vector, excluding T and Y
+T = data['d'] # define treatment vector
+Y = data['y'] # define outcome vector
 
 # %% Create the table of summary statistics
 file = path + "\\Estimates\\Summary.xlsx"
@@ -83,7 +84,8 @@ plt.savefig(path + '\\Figures\\histogram.png')
 
 # %% Define models and their parameters
 # Proceed very similarly to the simulation section. Define the models and then
-# use the DDMLCT class to estimate the dose-response function. 
+# use the DDMLCT class to estimate the dose-response function. Parameters were
+# selected via cross validation
 args_lasso1 = {
         'alpha':0.00069944,
         'max_iter':10000,
@@ -101,40 +103,72 @@ args_lasso2 = {
 model_lasso1 = linear_model.Lasso(**args_lasso1)
 model_lasso2 = linear_model.Lasso(**args_lasso2)
 
+# Generalized random forest is tuned at the time of fitting using the R
+# package, so no hyper-parameters are passed directly here. 
 model_rf1 = Supplement.regression_forest()
 model_rf2 = Supplement.regression_forest2()
 
-model_nn1 = Supplement.NeuralNet3k((138))
-model_nn2 = Supplement.NeuralNet4((138))
+# For neural networks, we used a single hidden layer network where the 
+# number of neurons in the hidden layer kept the number of weights relatively
+# close to the sample size (if too complex and there would be too many weights).
+# the learning rate and other related parameters were tuned via cross validation.
+# tuning these parameters is critical to attaining a good fit. 
+model_nn1 = Supplement.NeuralNet1_emp_app(k=139,
+                                          lr=0.15,
+                                          momentum=0.9,
+                                          epochs=100,
+                                          weight_decay=0.05)
 
-models = {
-        'lasso': [model_lasso1, model_lasso2],
-        'nn': [model_nn1, model_nn2]
-        }
+model_nn2 = Supplement.NeuralNet2_emp_app(k=138,
+                                          lr=0.05, 
+                                          momentum=0.3,
+                                          epochs=100,
+                                          weight_decay=0.15)\
 
+model_knn1 = Supplement.NeuralNet1k_emp_app(k=138,
+                                          lr=0.15,
+                                          momentum=0.9,
+                                          epochs=100,
+                                          weight_decay=0.05)
+
+model_knn2 = Supplement.NeuralNet2_emp_app(k=138,
+                                          lr=0.05, 
+                                          momentum=0.3,
+                                          epochs=100,
+                                          weight_decay=0.15)
+
+# Store all our models in a dictionary to be iterated over for estimation
 models = {
         'lasso': [model_lasso1, model_lasso2],
         'rf': [model_rf1, model_rf2],
-        'nn': [model_nn1, model_nn2]
+        'nn': [model_nn1, model_nn2],
+        'knn': [model_knn1, model_knn2]
         }
 
-
+# This dictionary denotes for which models we use basis functions for. We only
+# use basis functions for lasso, and allow other methods to capture any
+# non-linearities in an organic manner.
 basis = {
     'lasso':True,
     'rf':False,
-    'nn':False
+    'nn':False,
+    'knn':False
     }
 
 # %% Iterate over all t and ml algorithms for estimation
-t_list = np.arange(160,2001,40) # Set of all t we will evaluate at.
+# Set of all t we will evaluate at. We start at t=160 as the estimator performs
+# poorly at the boundary (in general we recommend to avoid the boundary points).
+t_list = np.arange(160,2001,40) 
 h = np.std(T)*3*(len(Y)**(-0.2)) # Initial rule of thumb bandwidth choice
-h=2*h
+# We use both the rule of thumb bandwidth, and double it, as we need to compute
+# the estimator at two bandwidths in order to estimate the optimal bandwidth. 
+h=2*h 
 L=5 # Number of sub-samples for cross-fitting
-ml_list = ['lasso','rf','nn'] # ml methods to be used.
+ml_list = ['lasso','rf','nn','knn'] # ml methods to be used.
 col_names = ['t','beta','se','h_star','h'] # names for everything we store from the estimation
-u=0.5
+u=0.5 #Defines the multiple of the previous "h" that is used as a second bandwidth.
 
-
+ml_list=['knn']
 # We first iterate over every method, estimating for bandwidth 2*h
 # where h is chosen as a rule of thumb bandwidth 3*std(T)*N^(-0.2).
 # We use the estimates from these two bandwidth choices and apply
@@ -142,24 +176,30 @@ u=0.5
 # the final optimal bandwidth. The second loop then iterates over all ML
 # methods and uses the optimal bandwidth. 
 for ml in ml_list:
-    if ml=='nn':
+    if ml=='knn':
+        # Fit model using 2*(rule of thumb bandwidth)
         model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
         model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
-
+        
+        # Fit model using rule of thumb bandwidth.
         model2 = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
         model2.fit(X,T,Y,t_list,L,h=h*u,basis=basis[ml],standardize=True)
     else:
+        # Fit model using 2*(rule of thumb bandwidth)
         model = Supplement.DDMLCT(models[ml][0],models[ml][1])
         model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
-
+        
+        # Fit model using rule of thumb bandwidth.
         model2 = Supplement.DDMLCT(models[ml][0],models[ml][1])
         model2.fit(X,T,Y,t_list,L,h=h*u,basis=basis[ml],standardize=True)
-        
-
+    
+    # We compute h_star based on the formulas from our paper, utilizing output
+    # from this first round of estimation.
     Bt = (model.beta-model2.beta)/((model.h**2)*(1-(u**2)))
     h_star = np.mean(((model2.Vt/(4*(Bt**2)))**0.2)*(model.n**-0.2))
-    print(h_star)
-    
+
+    # Combine different outputs we wish to store and save to excel. We do not
+    # compute theta_hat here, but in another file later "partial_effects.py"
     output = np.column_stack((np.array(t_list),model.beta,model.std_errors,
                                  np.repeat(h_star,len(t_list)),
                                  np.repeat(model.h,len(t_list))))
@@ -174,8 +214,9 @@ for ml in ml_list:
     file = path +  name
     model.gps.to_excel(file,index=True)
     
-
+# %% Carry out the estimation a second time, this time using the computed h*
 for ml in ml_list:
+    # First read h_star from the output files of the first round estimation
     path = os.getcwd() + "\\Empirical Application\\Estimates\\"
     name ='emp_app_' + str(ml) + '_c3_L5.xlsx'
     file = path+name
@@ -183,7 +224,8 @@ for ml in ml_list:
     h = dat['h_star'][0]  
     h = (0.8*h)
     
-    if ml=='nn':
+    # Refit models with new h_star
+    if ml=='knn':
         model = Supplement.NN_DDMLCT(models[ml][0],models[ml][1])
         model.fit(X,T,Y,t_list,L,h=h,basis=basis[ml],standardize=True)
     else:

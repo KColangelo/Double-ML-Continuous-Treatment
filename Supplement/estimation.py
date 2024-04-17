@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Mar 24 21:04:04 2020
-Last update Monday Jan 10 12:14 pm 2022
+Last update Sunday Oct 27 11:30 am 2023
 
 This file provides the main double debiased machine learning estimator for
 continuous treatments. The class "DDMLCT" performs the estimation when the
@@ -114,9 +114,17 @@ class DDMLCT:
     # subsample.
     def naive(self,Xf,XT,Xt,Y,I,I_C,L):
         if self.naive_count < self.L:
-            self.gamma_models.append(self.model1.fit(np.column_stack((XT[I_C],Xf[I_C])),Y[I_C]))
-            self.naive_count +=1
+                 self.gamma_models.append(self.model1.fit(np.column_stack((XT[I_C],Xf[I_C])),Y[I_C]))
+                 self.naive_count +=1
         gamma = self.gamma_models[L].predict(np.column_stack((Xt[I],Xf[I])))
+        # if sdml==False:
+        #     if self.naive_count < self.L:
+        #         self.gamma_models.append(self.model1.fit(np.column_stack((XT[I_C],Xf[I_C])),Y[I_C]))
+        #         self.naive_count +=1
+        #         gamma = self.gamma_models[L].predict(np.column_stack((Xt[I],Xf[I])))
+        # else:
+        #     gamma_model = self.model1.fit(np.column_stack((XT[I_C],Xf[I_C])),Y[I_C])
+        #     gamma = gamma_model.predict(np.column_stack((Xt[I],Xf[I])))
         return gamma
     
     # The function to estimate the GPS. g is the kernel smoothing function to
@@ -149,11 +157,13 @@ class DDMLCT:
     # for the GPS estimation. If added basis functions are used this is dfferent
     # from X, otherwise Xf = X. It has to be given separately because otherwise
     # it can't be determined which variables depend on T and which don't.
-    def fit_t(self,Xf,T,Y,trep,L,XT,Xt):
+    def fit_t(self,Xf,T,Y,trep,L,XT,Xt,trep_sdml=None,sdml=False):
         
         self.kept = np.array((),dtype=int) # used for trimming which is not currently implemented
         
         T_t = T-trep
+        
+
         g = gaussian_kernel(T_t,self.h)
         K = e_kernel(T_t,self.h) # 
         gamma = np.zeros(self.n)
@@ -221,17 +231,28 @@ class DDMLCT:
             
         for t in np.array((t_list),ndmin=1):
             self.n = len(Y)
-            if sdml==False:
-                trep = np.repeat(t,self.n)
+            trep = np.repeat(t,self.n)
+            trep_sdml = np.array(random.choices(np.array(T)*self.h + t, k = self.n))
+            if sdml==True:
+                if basis==True:
+                    Xt = self.augment(X,trep_sdml,ind)[0]
+                    #XT,Xf_trash,ind = self.augment(X,trep_sdml)
+                    if standardize == True:
+                        #XT, scaler = self.scale_non_dummies(XT)
+                        Xt = self.scale_non_dummies(Xt,scaler)[0]   
+                else:
+                    Xt = trep_sdml
+                    #XT = trep_sdml
             else:
-                trep = np.array(random.choices(np.array(T)*self.h + t, k = self.n))
-            if basis==True:
-                Xt = self.augment(X,trep,ind)[0]
-                if standardize == True:
-                    Xt = self.scale_non_dummies(Xt,scaler)[0]
-            else:
-                Xt = trep
-            self.fit_t(Xf,T,Y,trep,L,XT,Xt)
+                if basis==True:
+                    Xt = self.augment(X,trep,ind)[0]
+                    if standardize == True:
+                        Xt = self.scale_non_dummies(Xt,scaler)[0]
+                else:
+                    Xt = trep
+            self.fit_t(Xf,T,Y,trep,L,XT,Xt,trep_sdml,sdml)
+
+            
             
         self.h_star = ((np.mean(self.Vt)/(4*(np.mean(self.Bt**2))))**0.2)*(self.n**-0.2)
     
@@ -251,7 +272,7 @@ class DDMLCT:
         Xf = np.unique(Xf,axis=1)
         if np.array_equal(ind,None):
             XT,ind = np.unique(XT,axis=1,return_index=True)
-        else: 
+        else:
             XT = XT[:,ind]
         return XT, Xf, ind
     
@@ -336,7 +357,7 @@ class NN_DDMLCT(DDMLCT):
     # for the GPS estimation. If added basis functions are used this is dfferent
     # from X, otherwise Xf = X. It has to be given separately because otherwise
     # it can't be determined which variables depend on T and which don't.
-    def fit_t(self,Xf,T,Y,trep,L,XT,Xt):
+    def fit_t(self,Xf,T,Y,trep,L,XT,Xt,trep_sdml=None,sdml=False):
         self.kept = np.array((),dtype=int) # used for trimming which is not currently implemented
         
         
@@ -404,7 +425,7 @@ class DDMLCT_gps2(DDMLCT):
         t_lower = t_matrix[np.arange(len(t_matrix)),list(lower)]
         inverse_gps = (t_upper-t_lower)/(2*epsilon)
         gps = 1/inverse_gps
-        return gps      
+        return gps
     
     def fit_L(self,Xf,XT,Xt,Y,g,T,K,I,I_C,L,t):
         gamma = self.naive(Xf,XT,Xt,Y,I,I_C,L)
