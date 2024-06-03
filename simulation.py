@@ -342,15 +342,15 @@ if __name__=='__main__':
     total_replications = 1000 # Number of replications
     t=0 # Choice of t to estimate at.
     
-    # start_time = time.time()
+    #start = time.time()
     n_processes = multiprocessing.cpu_count()-1
     
     # params = tuple(repeat((J, 0, L_set, c_set, n_set, 'multigps',ml_set),n_processes))
     # with multiprocessing.Pool(n_processes) as pool:
     #     pool.starmap(simulate, params)
     
-    J_list = np.repeat(np.floor(1000/(n_processes-1)),(n_processes-1))
-    J_list = np.append(J_list,1000-np.sum(J_list))
+    J_list = np.repeat(np.floor(total_replications/(n_processes-1)),(n_processes-1))
+    J_list = np.append(J_list,total_replications-np.sum(J_list))
 
     params = tuple((x, 0, L_set, c_set, n_set, 'regps',ml_set) for x in J_list)
     
@@ -359,7 +359,8 @@ if __name__=='__main__':
         
     # simulate(J=J,t=t,L_set = L_set, c_set = c_set, n_set = n_set,method='multigps',ml_set = ml_set)
 
-
+    #end = time.time()
+    #print(end-start)
     # Process stuff to be profiled
 
     
