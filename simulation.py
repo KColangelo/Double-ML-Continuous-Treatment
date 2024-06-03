@@ -339,19 +339,20 @@ if __name__=='__main__':
     c_set = [1.0,1.25,1.5] # All c's used for bandwidth choice
     #c_set = [1.25] # All c's used for bandwidth choice
     L_set = [1,5] # All numbers of folds used for cross-fitting
-    total_replications = 1000 # Number of replications
+    total_replications = 1000# Number of replications
     t=0 # Choice of t to estimate at.
     
-    #start = time.time()
+    start = time.time()
     n_processes = multiprocessing.cpu_count()-1
+    #n_processes = 4
     
     # params = tuple(repeat((J, 0, L_set, c_set, n_set, 'multigps',ml_set),n_processes))
     # with multiprocessing.Pool(n_processes) as pool:
     #     pool.starmap(simulate, params)
     
     J_list = np.repeat(np.floor(total_replications/(n_processes-1)),(n_processes-1))
-    J_list = np.append(J_list,total_replications-np.sum(J_list))
-
+    J_list = np.append(J_list,int(total_replications-np.sum(J_list)))
+    J_list = J_list.astype(int)
     params = tuple((x, 0, L_set, c_set, n_set, 'regps',ml_set) for x in J_list)
     
     with multiprocessing.Pool(n_processes) as pool:
@@ -359,8 +360,8 @@ if __name__=='__main__':
         
     # simulate(J=J,t=t,L_set = L_set, c_set = c_set, n_set = n_set,method='multigps',ml_set = ml_set)
 
-    #end = time.time()
-    #print(end-start)
+    end = time.time()
+    print(end-start)
     # Process stuff to be profiled
 
     
