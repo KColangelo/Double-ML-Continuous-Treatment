@@ -37,10 +37,12 @@ from itertools import product
 
 
 dgps = ['dgp2']
-c_set = [.75,1.0,1.25,1.5]
+c_set = [1.0,1.25,1.5]
+#c_set = [1.25]
 n_set = [1000,10000]
 L_set = [1,5]
-ml_set = ['lasso','nn']
+#ml_set = ['lasso','nn']
+ml_set = ['lasso']
 stats = ['Bias','RMSE','Coverage']
 # We initialize the pandas dataframe that will store information in the same
 # strucutre as in the paper. We first define the hierarchical row index, and 
@@ -71,7 +73,7 @@ for dgp in dgps:
     # one of the files. 
     
     for group in list(product(ml_set,product(n_set,L_set,c_set))):
-        name = dgp+"_c" + str(group[1][2]) + "_" + group[0] + \
+        name = dgp+"_multigps_c" + str(group[1][2]) + "_" + group[0] + \
         "_L" + str(group[1][1]) + "_N" + str(group[1][0]) + ".csv"
         print(name)
         file = path + name
@@ -119,16 +121,19 @@ for dgp in dgps:
 
 
 
-# %% We use this section to generate results fo sdml and regps for lasso.
+# %% We use this section to generate results for sdml and regps for lasso.
 dgps = ['dgp2']
-c_set = [.75,1.0,1.25,1.5]
-n_set = [1000]
+c_set = [1.0,1.25,1.5]
+#c_set = [1.25]
+n_set = [1000,10000]
 L_set = [1,5]
 #ml_set = ['lasso','grf','knn']
 ml_set = ['lasso']
 stats = ['Bias','RMSE','Coverage']
 #estimators = ['sdml','regps']
-estimators = ['regps','sdml']
+#estimators = ['regps','sdml']
+estimators = ['regps']
+
 # We initialize the pandas dataframe that will store information in the same
 # strucutre as in the paper. We first define the hierarchical row index, and 
 # the hierarchical column labels, and then we initialize an empty data frame.
@@ -202,3 +207,37 @@ for estimator in estimators:
         name = 'table_raw_'+str(estimator)+'_'+str(dgp) + '_theta.xlsx'
         file = path + name 
         output_theta.to_excel(file,index=True) 
+        
+        
+        
+        
+# %%
+# Below was used to trace memory allocation. Under previous versions of the code
+# we had memory errors that needed to be fixed. We have left the code here commented
+# in case we need to use again in future iterations. 
+# snapshot = tracemalloc.take_snapshot()
+# top_stats = snapshot.statistics('lineno')
+
+
+# print("[ Top 10 ]")
+# for stat in top_stats[:10]:
+#     print(stat)
+import pandas as pd
+import matplotlib.pyplot as plt
+path = os.getcwd() + "\\Simulations\\" 
+name = "dgp2" + "_regps" + "_c" + str(1.0) + "_" + str('lasso') + "_L" + str(5) + "_N" +str(10000)+ ".csv"    
+file = path +"GPS\\"+ 'gps_'+name         
+df = pd.read_csv(file)
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+plt.hist(df.values.ravel(), bins='auto', range=(-1, 1)) 
+plt.hist(df.iloc[0].values.ravel(), bins='auto') 
+
+path = os.getcwd() + "\\Simulations\\" 
+name = "dgp2" + "_multigps_c" + str(1.0) + "_" + str('lasso') + "_L" + str(5) + "_N" +str(1000)+ ".csv"    
+file = path +"GPS\\"+ 'gps_'+name         
+df = pd.read_csv(file)
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+plt.hist(df.values.ravel(), bins='auto')
+plt.hist(df.iloc[0].values.ravel(), bins='auto') 
+
+

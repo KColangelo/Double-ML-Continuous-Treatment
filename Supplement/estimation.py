@@ -405,7 +405,7 @@ class NN_DDMLCT(DDMLCT):
 class DDMLCT_gps2(DDMLCT):
     def ipw(self,Xf,g,T,t,I,I_C):
         epsilon = 0.025
-        t_grid = np.arange(t-1.5*self.h,t+1.5*self.h,self.h/100)
+        t_grid = np.arange(t-1.5*self.h,t+1.5*self.h,self.h/50)
         self.model2.fit(Xf[I_C],g[I_C])
         cdf_hat = self.model2.predict(Xf[I])
         #print(np.std(cdf_hat))
@@ -417,13 +417,47 @@ class DDMLCT_gps2(DDMLCT):
             g = norm.cdf(t_T/self.h)
             self.model2.fit(Xf[I_C],g[I_C])
             cdf_hats[:,i] = self.model2.predict(Xf[I])
-            cdf_hats[:,i] = self.model2.predict(Xf[I])
-        lower = np.argmin(np.abs(cdf_hats-(cdf_hat-epsilon)), axis=1)
-        upper = np.argmin(np.abs(cdf_hats-(cdf_hat+epsilon)), axis=1)
+        # find value of t with closest to cdf-hat-epsilon.
+        # df = pd.DataFrame()
+        # df['cdf'] = cdf_hats
+        # df['cdf-eps'] = cdf_hat-epsilon
+        # df['cdf+eps'] = cdf_hat+epsilon
+        # print(df)
+        #df.loc[df['cdf']>df['cdf-eps'],'cdf'].idxmin()
+        # cdf_hats[cdf_hats<epsilon]=0
+        # cdf_hat[cdf_hat<0]=0
+
+        df = pd.DataFrame(cdf_hats)
+        lower = df[df>(cdf_hat-epsilon)].T.apply(pd.Series.first_valid_index)
+
+        lower = lower.fillna(0)
+        lower = lower.astype(int)
+        lower = lower.values.tolist()
+
+        df = pd.DataFrame(cdf_hats)
+        upper = df[df>(cdf_hat+epsilon)].T.apply(pd.Series.first_valid_index)
+        
+        upper = upper.fillna(len(t_grid)-1)
+        upper = upper.astype(int)
+        upper = upper.values.tolist()
+        #print(np.sum(np.array(upper)<np.array(lower)))
+        # print(cdf_hat[(np.array(upper)<np.array(lower))][0])
+        # print(cdf_hats[np.array(upper)<np.array(lower),:][0])
+        # problem_cdf = cdf_hat[(np.array(upper)<np.array(lower))][0][0]
+        # test = pd.Series(cdf_hats[np.array(upper)<np.array(lower),:][0])
+        # print(test[test>(problem_cdf-epsilon)].first_valid_index,test[test>(problem_cdf+epsilon)].first_valid_index)
+        # #print(cdf_hat)
+        # lower = np.argmin(abs(cdf_hats-(cdf_hat-epsilon)), axis=1)
+        # upper = np.argmin(abs(cdf_hats-(cdf_hat+epsilon)), axis=1)
+
         t_matrix = np.repeat(np.array(t_grid,ndmin=2),len(I),axis=0)
-        t_upper = t_matrix[np.arange(len(t_matrix)),list(upper)]
-        t_lower = t_matrix[np.arange(len(t_matrix)),list(lower)]
+
+        t_upper = t_matrix[np.arange(len(t_matrix)),upper]
+        t_lower = t_matrix[np.arange(len(t_matrix)),lower]
+
         inverse_gps = (t_upper-t_lower)/(2*epsilon)
+        #print(np.sum(inverse_gps==0))
+
         gps = 1/inverse_gps
         return gps
     
@@ -440,7 +474,7 @@ class DDMLCT_gps2(DDMLCT):
         
         return beta_hat, gamma, gps
     
-    def fit_t(self,Xf,T,Y,trep,L,XT,Xt):
+    def fit_t(self,Xf,T,Y,trep,L,XT,Xt,trep_sdml=None,sdml=False):
         
         self.kept = np.array((),dtype=int) # used for trimming which is not currently implemented
         
