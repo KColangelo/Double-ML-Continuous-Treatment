@@ -323,8 +323,10 @@ class DDMLCT:
 class NN_DDMLCT(DDMLCT):
     # Similar to DDMLCT "naive" function but adjusted to fit for every t.
     def naive(self,Xf,XT,Xt,Y,I,I_C,L,K):
-        gamma_model = self.model1.fit(Xf[I_C],Y[I_C],K[I_C])
-        gamma = gamma_model.predict(Xf[I])
+        # gamma_model = self.model1.fit(Xf[I_C],Y[I_C],K[I_C])
+        # gamma = gamma_model.predict(Xf[I])
+        gamma_model = self.model1.fit(np.column_stack((XT[I_C],Xf[I_C])),Y[I_C],K[I_C])
+        gamma = gamma_model.predict(np.column_stack((Xt[I],Xf[I])))
         return gamma
     
     # The function to estimate the GPS. g is the kernel smoothing function to
