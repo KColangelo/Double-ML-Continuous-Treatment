@@ -18,7 +18,8 @@ Archive/
 *.bib
 *.tex
 *.pdf
-Tuning*.py
+Tuning Simulation.py
+Tuning emp app.py
 .Rhistory
 .spyproject
 sim_test.py
