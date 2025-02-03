@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Mar 18 10:25:17 2020
-Last update Monday Jan 10 1:13 pm 2022
+Last update Jan 31 1:13 pm 2025
 
 This file is to be run after both "empirical_application.py" and "partial_effects.py".
-The only purpose of this file is to generate all figures used in Colangelo and Lee (2023).
+The only purpose of this file is to generate all figures used in Colangelo and Lee (2025).
 The function "plot_ci" was defined to easily plot the confidence interval for a 
 range of t. 
 

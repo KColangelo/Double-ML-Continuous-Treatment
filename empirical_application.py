@@ -4,7 +4,7 @@ Created on Sat Mar 28 14:45:54 2020
 Last update Sunday Oct 27 10:35 am 2023
 
 In this file we perform the main computation for the empirical application section
-of Colangelo and Lee (2023). We start by reading in the data which we put in the 
+of Colangelo and Lee (2025). We start by reading in the data which we put in the 
 sub folder "Empirical Application". Categorical variables are converted to dummies 
 and we then define our outcome Y, treatment T, and covariates X. The machine learning
 models to be used are then defined, as well as the values of t to evaluate the 
@@ -17,8 +17,7 @@ to True only for lasso. After an initial estimation with the initial bandwidth,
 the DDMLCT model object stores an estimate of h_star. This h_star is then used 
 in a successive estimation with the new estimated optimal bandiwidth. The main 
 results are stored in the "/empirical application/estimates" folder. GPS estimates
-are stored in "/empirical application/GPS". Although the GPS estimates are not 
-referenced in the paper, we still stored them for our own diagnostic purposes. 
+are stored in "/empirical application/GPS". 
 
 Comments on packages used:
     -Supplement is the package designed specifically for this project which defines
@@ -168,7 +167,7 @@ ml_list = ['lasso','rf','nn','knn'] # ml methods to be used.
 col_names = ['t','beta','se','h_star','h'] # names for everything we store from the estimation
 u=0.5 #Defines the multiple of the previous "h" that is used as a second bandwidth.
 
-ml_list=['knn']
+
 # We first iterate over every method, estimating for bandwidth 2*h
 # where h is chosen as a rule of thumb bandwidth 3*std(T)*N^(-0.2).
 # We use the estimates from these two bandwidth choices and apply

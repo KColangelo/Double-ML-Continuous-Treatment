@@ -1,52 +1,61 @@
 """
 Created on Fri Mar 27 22:12:26 2020
-Last update Sunday Oct 27 11:02 am 2023
+Last update Sunday Jan 27 11:02 am 2025
 
 This file is for running the main simulation results. Estimates and standard
-errors for each simulation are saved in multiple files. We begin by defining the 
-parameters used for lasso and generalized random forest, and then create all of the machine
-learning models we use. Models ending in '1' are used for the estimation of gamma. 
-Models ending in "2" are used for the estimation of the generalized propensity 
-score.Random forest is typically abbreviated with "rf",neural network is 
+errors for each simulation are saved in multiple files. We define  a function
+"simulate" which does the heavy lifting, simulating for the specified data 
+generating processes, ml algorithms, values of N, c, L, and specified number
+of replications. "simulate_all" is a function which passes a sequence of parameter
+sets to simulate. This was to simplify using different DGPs and estimation procedures
+(some simulations we use multigps, some regps, and a number of different DGPSs).
+Random forest is typically abbreviated with "rf",neural network is 
 typicall abbreviated with "nn", generalized random forest is abbreviated as 
-"grf", and the neural network proposed in Colangelo and Lee (2023) is 
-abbreviated as "knn", short for "Kernel Neural Network", in the code.
+"grf", and the neural network proposed in Colangelo and Lee (2025) is 
+abbreviated as "knn", short for "Kernel Neural Network", in the code. The
+__main__ function is designed to use the multiprocessing package to parallelize
+the simulations. This was done to drastically improve the computation time. It
+is coded to automatically use 1 fewer thread as there exist cores on your computer.
+If you wish this can be manually changed to however many threads you wish depending
+on your specs. The code is designed so that in the event of a crash, you should 
+be able to restart without issue and have it continue to append to the files
+until the specified number of replications is reached. 
 
-List of algorithms: ml_list = ['lasso','grf','rf','nn','knn']
-Sample sizez: n_list = [1000,10000]
-number of sub samples for cross-fitting: L_list = [1,5]
-number of repetitions: J=1000
-coefficient for rule of thumb bandwidth: c_list = [0.75,1.0,1.25,1.5]
+Note that some of the names in the code may not agree with the paper due to the
+many iterations we have made. As such, you may see "DGP2" in the code referred
+to by a different name in the paper. 
 
-The numerical results of the paper focus on lasso, and nn. Previous
-versions of the paper focused on rf, knn, and grf. 
-We left these in the code, and the results are saved to a separate folder 
-"Extra_Simulations" for our own reference.
+The numerical results of the paper focus on lasso primarily, with some results
+using nn and knn. Previous versions of the paper also focused on rf, and grf. 
+We left these in the code, but comment out the parts that would have run the
+rf and grf simulations. If you choose to run with these algorithms the results
+will be saved to the folder "Extra_Simulations" for reference.
 
-Files are created for each combination of machine learning method, n, L, and c.
+Files are created for each combination of machine learning method, DGP, n, L, and c.
 Models for random forest and lasso are from sklearn. Neural networks use pytorch.
 The neural networks used are defined in /Supplement/models.py, including the 
-knn. The data generating process used is defined in /Supplement/DGP.py.
+knn. The data generating processes used is defined in /Supplement/DGP.py.
 Estimation is carried out using the estimator defined in /Supplement/estimation.py 
-as the class DDMLCT. An instance of the class is initialized with 2 models, 
-the first for the estimation of gamma and the second for the estimation of 
-the generalized propensity score. The .fit method takes arguments for covariates X, 
-treatment T, outcome Y, bandwidth choice h, choice of t to estimate the dose 
-response function at, choice of the number of sub-samples for cross-fitting (L), 
-whether or not to use the added basis functions, and whether to standardize the data.
+as the class DDMLCT, or the class DDMLCT_NN for knn. An instance of the class 
+is initialized with 2 models, the first for the estimation of gamma and the second 
+for the estimation of the generalized propensity score. The .fit method takes 
+arguments for covariates X, treatment T, outcome Y, bandwidth choice h, 
+choice of t to estimate the dose response function at, choice of the number 
+of sub-samples for cross-fitting (L), whether or not to use the added basis 
+functions, and whether to standardize the data.
 
-The generalized random forest implementation uses the R package, and utilizes
-Rpy2 to use the R package in Python. There is a known issue in our code with
-this implementation in that there is a memory leak. After a large number of
-simulations which estimate the generalized random forest, the memory usage
-increases until the program eventually crashes. We have not found a fix for 
-this memory leak issue yet, so please contact us if you figure out how to fix
-it. There is now a grf implementation in Python, however we have not updated
-our code to use it. At the time we originally tried grf, this package was not
-available.
+While not used in the paper, the generalized random forest implementation uses 
+the R package, and utilizes Rpy2 to use the R package in Python. There is a 
+known issue in our code withthis implementation in that there is a memory leak. 
+After a large number of simulations which estimate the generalized random forest, 
+the memory usage increases until the program eventually crashes. We have not 
+found a fix for this memory leak issue yet, so please contact us if you figure 
+out how to fix it. There is now a grf implementation in Python in econml which was
+not available when we first worked on this paper which is likely a better option to
+utilize.
 
 If the code is terminated while running, the simulations up until that point 
-should be saved, and can be continued by starting the code again.
+will be saved, and can be continued by starting the code again.
 
 comments on packages used:
     -Supplement is the package defined for this paper that creates the DGP, main
@@ -63,171 +72,33 @@ comments on packages used:
 """
 # %% Import Necessary packages.
 import Supplement
-
-from sklearn import linear_model
 #from sklearn.ensemble import ExtraTreesRegressor
 import os
-from itertools import product, repeat
+from itertools import product
 import gc
 #import tracemalloc
 import multiprocessing
 from filelock import FileLock
 import time
-import cProfile, pstats, io
-from pstats import SortKey
+#import cProfile, pstats, io
+#from pstats import SortKey
 import numpy as np
-
 # %%
-# The outer loop iterates over every combination of sample size n and replication
-# number. We only generate the data with respect to n and replication number,
-# and for this reason we had to use 2 loops. The inner loop iterates over ml
-# method, choice of c and choice of L. Files are saved with a particular naming
-# convention to describe what n,L,c and ml method they correspond to.
-# Example: "dgp2_c0.5_lasso_L1_N500.csv" means this is a file for lasso, with
-# c=0.5, L=1, and n=500, and for DGP2. The numbering of the DGP is not present
-# in the paper, but is left in the code as we had been experimenting with different
-# DGP definitions before settling on what we termed "DGP2."
-def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000], method='multigps',ml_set=['lasso']):
-    # %% Define necessary parameters for ML algorithms. These were tuned via cross
-    # fitting. Code related to this is in the file "Tuning Simulation.py". The code
-    # in the tuning file is however not "streamlined" and does take some manual
-    # tinkering to do the tuning. We use different hyperparameters for each 
-    # sample size. 
-    args_lasso1_n1000 = {
-            'alpha':0.04962103409792727,
-            'max_iter':5000,
-            'tol':0.001
-            }
+# This function does the main heavy lifting of the simulations, running
+# the specified number of replications (J) for value of t and sets of other
+# parameters. 
+# Files are saved with a particular naming convention to describe what n,L,c 
+# and ml method they correspond to. Example: "dgp2_c0.5_lasso_L1_N500.csv" 
+# means this is a file for lasso, with c=0.5, L=1, and n=500, and for DGP2. 
+#The numbering of the DGP is not the same as in in the paper, but is left in 
+#the code as we had been experimenting with different DGP definitions.
+def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000],
+             method='multigps',ml_set=['lasso'], dgp=Supplement.dgp2, B=1000):
+    # %% The file tuning_parameters.py in Supplement contains all the models and
+    # parameters. 
+    models = Supplement.tuned_models
+    basis = Supplement.basis
     
-    args_lasso2_n1000 = {
-            'alpha':0.07754708123579417,
-            'max_iter':5000,
-            'tol':0.001
-            }
-    #0.022303389538363024
-    #0.016899722478163216
-    args_lasso1_n10000 = {
-            'alpha':0.022303389538363024,
-            'max_iter':5000,
-            'tol':0.001
-            }
-    
-    args_lasso2_n10000 = {
-            'alpha':0.016899722478163216,
-            'max_iter':5000,
-            'tol':0.001
-            }
-    # Define parameters for random forest. Currently this is commented out as the
-    # present version of the paper does not use random forest in the simulation
-    # results. 
-    # args_rf1 = {
-    #         'n_estimators':1000,
-    #         'max_depth':None,
-    #         'min_samples_leaf':40,
-    #         'min_samples_split':40
-    #         }
-    
-    # args_rf2 = {
-    #         'n_estimators':1000,
-    #         'max_depth':None,
-    #         'min_samples_leaf':40,
-    #         'min_samples_split':40
-    #         }
-    # %% Define the models we will be using with the specified parameters
-    model_lasso1_n10000 = linear_model.Lasso(**args_lasso1_n10000)
-    model_lasso2_n10000 = linear_model.Lasso(**args_lasso2_n10000)
-    model_lasso1_n1000 = linear_model.Lasso(**args_lasso1_n1000)
-    model_lasso2_n1000 = linear_model.Lasso(**args_lasso2_n1000)
-    
-    # Define the generalized random forest models. Not currently used in paper so
-    # commented out.
-    # model_grf1 = Supplement.regression_forest()
-    # model_grf2 = Supplement.regression_forest2()
-    
-    # Define random forest models. Not currently used in paper so commented out.
-    # model_rf1 = ExtraTreesRegressor(**args_rf1)
-    # model_rf2 = ExtraTreesRegressor(**args_rf2)
-    
-    # For the neural networks we need to specify the number of covariates.
-    # we have 100 X variables and one treatment. The Second stage of the regular
-    # neural network takes treatment as an input, hence "101". But the knn does
-    # not take treatment as an input, hence why its second stage has "100". The
-    # First stage regresses T on X, hence we do not do the knn. Learning rate
-    # and related parameters are tuned in "Tuning Simulation.py". 
-    model_nn1_n10000 = Supplement.NeuralNet1_n10000(k=101, 
-                                      lr=0.05,
-                                      momentum=0.95,
-                                      epochs=100,
-                                      weight_decay=0.05) 
-    model_nn2_n10000 = Supplement.NeuralNet2_n10000(k=100, 
-                                      lr=0.4,
-                                      momentum = 0.0, 
-                                      epochs=100,
-                                      weight_decay=0.075)
-    
-    model_nn1_n1000 = Supplement.NeuralNet1_n1000(k=101, 
-                                      lr=0.01,
-                                      momentum=0.9,
-                                      epochs=100,
-                                      weight_decay=0.05) 
-    
-    model_nn2_n1000 = Supplement.NeuralNet2_n1000(k=100, 
-                                      lr=0.01,
-                                      momentum = 0.9, 
-                                      epochs=100,
-                                      weight_decay=0.3)
-    
-    model_knn1_n10000 = Supplement.NeuralNet1k_n10000(k=100, 
-                                      lr=0.05,
-                                      momentum = 0.9,
-                                      epochs=100,
-                                      weight_decay=0.1)
-    
-    model_knn2_n10000 = Supplement.NeuralNet2_n10000(k=100, 
-                                      lr=0.4,
-                                      momentum = 0.0, 
-                                      epochs=100,
-                                      weight_decay=0.075)
-    
-    model_knn1_n1000 = Supplement.NeuralNet1k_n1000(k=100, 
-                                      lr=0.01,
-                                      momentum=0.9,
-                                      epochs=100,
-                                      weight_decay=0.05) 
-    
-    model_knn2_n1000 = Supplement.NeuralNet2_n1000(k=100, 
-                                      lr=0.01,
-                                      momentum = 0.9, 
-                                      epochs=100,
-                                      weight_decay=0.3)
-    
-    
-    # I collect the models into a dictionary so that they can be easily iterated over
-    # for estimation.
-    models = {
-            'lasso': {'1000':[model_lasso1_n1000, model_lasso2_n1000], 
-                      '10000':[model_lasso1_n10000, model_lasso2_n10000]},
-            'nn': {'1000':[model_nn1_n1000, model_nn2_n1000], 
-                      '10000':[model_nn1_n10000, model_nn2_n10000]},
-            'knn': {'1000':[model_knn1_n1000, model_knn2_n1000], 
-                      '10000':[model_knn1_n10000, model_knn2_n10000]}
-            }
-    
-    # This dictionary defines which ml methods uses added basis functions and which
-    # do not. An option is included in the fit method of DDMLCT to generate the 
-    # basis functions. 
-
-    basis = {
-    'lasso':True,
-    'grf':False,
-    'rf':False,
-    'nn':False,
-    'knn':False
-    }
-
-
-
-
     # These are the directories we store results to. If the directories don't exist
     # when this code is run, then they are created. 
     path = os.getcwd() + "/Simulations/"
@@ -242,15 +113,13 @@ def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000], method='multigps',m
     # pr.enable()
     # tracemalloc.start() This was used previously to diagnose memory leak issues. 
     np.random.seed((os.getpid() * int(time.time())) % 123456789)
+    groups = list(product(ml_set,product(L_set,c_set)))
     for sim in list(product(range(J),n_set)):
         n = sim[1]
-        # We experimented with multiple DGPs before aligning on using "DGP2". It
-        # is not referred to by number in the paper, but we had considered 3 different
-        # DGPs, and you can view their definitions in the Supplment.dgp.py file.
-        # DPG2 was chosen as it incorporated a more non-linear relationship in the 
-        # data while not looking too "pathological."
-        X, T, Y = Supplement.DGP2a(n) 
-        for group in list(product(ml_set,product(L_set,c_set))):
+        # depending on what dgp is passed as an argument, determines which 
+        # dgp we generate data with. DGPs defined in dgp.py
+        X, T, Y = dgp(n) 
+        for group in groups:
             c = group[1][1]
             ml = group[0]
             L = group[1][0]
@@ -264,7 +133,7 @@ def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000], method='multigps',m
             #start_time = time.time()
             if method=='multigps':
                 if ml=='knn':
-                    model = Supplement.NN_DDMLCT(models[ml][str(n)][0],models[ml][str(n)][1])
+                    model = Supplement.NN_DDMLCT(models[dgp.__name__][ml][str(n)]['gamma'],models[dgp.__name__][ml][str(n)]['ipw'])
                     model.fit(X,T,Y,t_list,L=L,h=h,basis=basis[ml],standardize=True)
                     beta = model.beta
                     std_error = model.std_errors
@@ -273,7 +142,7 @@ def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000], method='multigps',m
                     partial_effect_std = ((np.sqrt(15/6)/h)*std_error[0])
         
                 else:
-                    model = Supplement.DDMLCT(models[ml][str(n)][0],models[ml][str(n)][1])
+                    model = Supplement.DDMLCT(models[dgp.__name__][ml][str(n)]['gamma'],models[dgp.__name__][ml][str(n)]['ipw'])
                     model.fit(X,T,Y,t_list,L=L,h=h,basis=basis[ml],standardize=True)
                     beta = model.beta
                     std_error = model.std_errors
@@ -281,8 +150,7 @@ def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000], method='multigps',m
                     partial_effect = (beta[2]-beta[1])/eta
                     partial_effect_std = ((np.sqrt(5/2)/h)*std_error[0])
             else:
-                t_list = np.array([0,-(eta/2),(eta/2)])
-                model = Supplement.DDMLCT_gps2(models[ml][str(n)][0],models[ml][str(n)][1])
+                model = Supplement.DDMLCT_gps2(models[dgp.__name__][ml][str(n)]['gamma'],models[dgp.__name__][ml][str(n)]['ipw'])
                 model.fit(X,T,Y,t_list,L=L,h=h,basis=basis[ml],standardize=True,sdml=False)
                 beta = model.beta
                 std_error = model.std_errors
@@ -291,30 +159,43 @@ def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000], method='multigps',m
                 partial_effect_std = ((np.sqrt(5/2)/h)*std_error[0])
         
             out = np.column_stack((beta[0],std_error[0],partial_effect,partial_effect_std))
-            name = "dgp2_"+method + "_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
+            name = dgp.__name__ + "_"+method + "_c" + str(c) + "_" + str(ml) + "_L" + str(L) + "_N" +str(n)+ ".csv"
             
-            # Baseline rf and nn will not be saved in main folder as they are not
-            # included in the main results.
-            if ml=='rf' or ml=='knn' or ml=='grf':
+            # Baseline rf, and grf will not be saved in main folder as they 
+            # are considered auxiliary results not used in the paper.
+            if ml=='rf' or ml=='grf':
                 path = os.getcwd() + "/Simulations/Extra_Simulations/" 
             else:
                 path = os.getcwd() + "/Simulations/"
     
             file = path + name
-            lock_path = file + ".lock"
-            lock = FileLock(lock_path, timeout=1)
+            lock_path = file.replace(".csv","") + ".lock"
+            lock = FileLock(lock_path, timeout=1) # Make sure there's no conflict between threads
             with lock:
-                with open(file, 'ab') as f:
-                    np.savetxt(f,out,delimiter=',', fmt='%f')
+                with open(file, 'ab') as f, open(file,'rb') as f2:
+                    n_rows = sum(1 for _ in f2)
+                    # check if we have met the number of replications. This is
+                    # only necessary if there is a crash and simulations needed
+                    # to be restarted. It ensures we don't run more replications
+                    # than we want for any given parameter set. 
+                    if n_rows<B: 
+                
+                        np.savetxt(f,out,delimiter=',', fmt='%f')
+                    else:
+                        groups.remove(group)
+                        continue
             
             file = path +"GPS/"+ 'gps_'+name
-            lock_path = file + ".lock"
+            lock_path = file.replace(".csv","") + ".lock"
             lock = FileLock(lock_path, timeout=1)
             with lock:
-                with open(file, 'ab') as f:
-                    np.savetxt(f,model.gps[[0]].T,delimiter=',', fmt='%f')
-        # This is an attempt to partially fix the memory leak problem but it
-        # is not sufficient.
+                with open(file, 'ab') as f, open(file,'rb') as f2:
+                    n_rows = sum(1 for _ in f2)
+                    if n_rows<B:
+                        np.savetxt(f,model.gps[[0]].T,delimiter=',', fmt='%f')
+                    else:
+                        continue
+
         gc.collect() # This was used as there was a tendency for memory leakage.
 
     # pr.disable()
@@ -327,45 +208,91 @@ def simulate(J=1, t=0, L_set=[5], c_set=[1.25],n_set=[1000], method='multigps',m
     # with lock:
     #     with open('test.txt', 'w+') as f:
     #         f.write(s.getvalue())
+    
+    
+#This function passes a parameter grid to the simulate function in order to 
+#allow us to run simulations for all the DGPs without manually calling the function
+#a bunch of times.   
+def simulate_all(J):
+    sim_set = {
+            'dgp2': {'dgp':Supplement.dgp2,
+                      'n_set':[1000,10000],
+                      'c_set':[0.5,0.75,1.0,1.25,1.5],
+                      'L_set':[1,5], 
+                      'method_set':['multigps'],
+                      'ml_set':['knn']},
+            'dgp2a': {'dgp':Supplement.dgp2a,
+                      'n_set':[250,500,1000],
+                      'c_set':[0.25,0.5,0.75,1.0,1.25,1.5],
+                      'L_set':[1,5], 
+                      'method_set':['multigps','regps'],
+                      'ml_set':['lasso']},
+            'dgp2b': {'dgp':Supplement.dgp2b,
+                      'n_set':[250,500,1000],
+                      'c_set':[0.25,0.5,0.75,1.0,1.25,1.5],
+                      'L_set':[1,5], 
+                      'method_set':['multigps'],
+                      'ml_set':['lasso']},
+            'dgp4a': {'dgp':Supplement.dgp4a,
+                      'n_set':[250,500,1000],
+                      'c_set':[0.25,0.5,0.75,1.0,1.25,1.5],
+                      'L_set':[1,5], 
+                      'method_set':['multigps','regps'],
+                      'ml_set':['lasso']},
+            'dgp4b': {'dgp':Supplement.dgp4b,
+                      'n_set':[250,500,1000],
+                      'c_set':[0.25,0.5,0.75,1.0,1.25,1.5],
+                      'L_set':[1,5], 
+                      'method_set':['multigps','regps'],
+                      'ml_set':['lasso']}
+            }
+    for sim in sim_set:
+        for method in sim_set[sim]['method_set']:
+            simulate(J=J, L_set = sim_set[sim]['L_set'],c_set=sim_set[sim]['c_set'],
+                     n_set=sim_set[sim]['n_set'],method=method,
+                     dgp=sim_set[sim]['dgp'])
+
 
 # %%
 if __name__=='__main__':
-    # Iterate over all t and ml algorithms for estimation
-    # Define all the sets of parameters that we will create estimates for. That is,
-    # define which sets of N, c, L and ML algorithms will be used for our results.
-    ml_set = ['lasso']
-    #n_set = [1000,10000] # All sample sizes used
-    n_set = [1000,10000] # All sample sizes used
-    c_set = [1.0,1.25,1.5] # All c's used for bandwidth choice
-    #c_set = [1.25] # All c's used for bandwidth choice
-    L_set = [1,5] # All numbers of folds used for cross-fitting
-    total_replications = 1000# Number of replications
+    # Here we use multiprocessing to divide up the simulations into parallel
+    # processes and increase speed. 
+    total_replications = 1000# Number of replications 
     t=0 # Choice of t to estimate at.
     
-    start = time.time()
+
     n_processes = multiprocessing.cpu_count()-1
-    #n_processes = 4
+
+
     
-    # params = tuple(repeat((J, 0, L_set, c_set, n_set, 'multigps',ml_set),n_processes))
-    # with multiprocessing.Pool(n_processes) as pool:
-    #     pool.starmap(simulate, params)
+    # J_list is the list of the number of replications that each thread will run.
+    # we make sure that the sum of replications across threads equals the exact
+    #amount we desire, in this case 1000. 
+    if n_processes>1:
+        J_list = np.repeat(np.floor(total_replications/(n_processes-1)),(n_processes-1))
+        J_list = np.append(J_list,int(total_replications-np.sum(J_list)))
+        J_list = J_list.astype(int)\
+
+    else:
+        J_list = [total_replications]
+
+
+    # These are necessary because otherwise numpy insists on using all cores within
+    # each thread which causes everything to freeze up due to trying to use
+    # too many computational resources. 
+    os.system("taskset -p 0xff %d" % os.getpid())
+    os.environ["OMP_NUM_THREADS"] = "1"
     
-    J_list = np.repeat(np.floor(total_replications/(n_processes-1)),(n_processes-1))
-    J_list = np.append(J_list,int(total_replications-np.sum(J_list)))
-    J_list = J_list.astype(int)
-    params = tuple((x, 0, L_set, c_set, n_set, 'regps',ml_set) for x in J_list)
-    
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
     with multiprocessing.Pool(n_processes) as pool:
-        pool.starmap(simulate, params)
+        pool.map(simulate_all, J_list)
         
-    # simulate(J=J,t=t,L_set = L_set, c_set = c_set, n_set = n_set,method='multigps',ml_set = ml_set)
-
-    end = time.time()
-    print(end-start)
-    # Process stuff to be profiled
-
     
-    #print(s.getvalue())
+    # This was used to profile the code and find computational bottlenecks
     # simulate(J=J,t=t,L_set = L_set, c_set = c_set, n_set = n_set,method='regps',ml_set = ml_set)
     
     # cProfile.run("""simulate(J=J,t=t,L_set = L_set, 

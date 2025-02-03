@@ -11,12 +11,12 @@
 
 ## Introduction <a name="introduction"></a>
 This code was used for the simulation and empirical application
-results in Colangelo and Lee (2023). Please cite the authors appropriately if you 
+results in Colangelo and Lee (2025). Please cite the authors appropriately if you 
 use any of this code.
 
 ## How to Replicate the Results <a name="replication"></a>
 
-To replicate the results as in Colangelo and Lee (2023):
+To replicate the results as in Colangelo and Lee (2025):
 
 To replicate the simulation results:<br />
 (1) Run simulation.py<br />
@@ -44,31 +44,35 @@ for h_star, which are denoted as such in their file names.
 
 ## Additional Code Files <a name="additional-files"></a>
 Additional files are in the folder "Supplement". Supplement was created as a module to be imported into 
-the simulation and empirical application files. Within the folder are 5 files:
+the simulation and empirical application files. Within the folder are 6 files:
 
 -dgp.py defines the data generating process used in the simulations. It also contains
 other DGPs we had experimented with in the past. <br />
 -estimation.py is where we define the class which describes the main estimator, defined as DDMLCT. 
  After importing Supplement, we can initialize a DDMLCT object by calling Supplement.DDMLCT(model1,model2).
  We additionally define a subclass of DDMLCT called "NN_DDMLCT" which is used for
- the new neural network implementation described in Colangelo and Lee (2023). We also
+ the new neural network implementation described in Colangelo and Lee (2025). We also
  define a subclass DDMLCT_gps2 which implements the estimator using ReGPS. <br />
 -file_management.py defines a function which we use to help organize the file structure of the output<br />
 -models.py defines the neural network models we use in both the simulations and empirical application. 
 For other models (lasso and random forest) we use the models form sklearn directly.
 -rgrf.py uses rpy2 to call the generalized random forest R package. 
+-tuning_parameters.py is just a file which stores all the models and associated
+tuning parameters that are used in our simulations. 
 
 ## Simulation Results Files <a name="sim-names"></a>
 In the simulation folder, we save files with names that denote choice of c,n,L, and ml method.
-For example: dgp2_c0.5_lasso_L1_N500.csv means this is a file corresponding to the DGP 
-in the simulations, with c=0.5, ml=lasso, L=1, and n=500. After these are compiled 
+For example: dgp2_multigps_c0.5_lasso_L1_N500.csv means this is a file corresponding to the DGP 2
+in the simulations, using the multigps version of the estimator, with 
+c=0.5, ml=lasso, L=1, and n=500. After these are compiled 
 into the concise results using simulation_results.py, the results are saved in 
-dgp2_table_raw.xlsx. To get the exact formatting as in the paper, copy the values into dgp2_table.xlsx.
+dgpx_table_method_raw.xlsx, where "dgpx" and "method" are replaced with whatever
+dgp and method were used. 
 
 ## Empirical Application Files <a name="emp-files"></a>
 The input data used is denoted "emp_app.csv"
 
-In the estimates subfolder there are 7 files. "Summary.xlsx" stores the summary statistcs we dispay
+In the estimates subfolder there are 9 files. "Summary.xlsx" stores the summary statistcs we dispay
 in the paper. Every other file stores the estimates for the empirical application. File names denote
 which machine learning method was used, choice of the number of sub-samples for cross fitting (L),
 choice of c for the initial bandwidth computation, and whether the estimated optimal bandwidth was used
@@ -100,8 +104,8 @@ Packages and exact versions used when we generated our results:<br />
 -scipy 1.4.1<br />
 -matplotlib 3.1.3<br />
 -pillow 7.0.0<br />
--rpy2 2.9.4
-
+-rpy2 2.9.4<br />
+-filelock 3.0.12
 ## Additional Notes <a name="notes"></a>
 Additional details are included as comments within each respective file.
 

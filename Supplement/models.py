@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Mar 27 23:04:09 2020
-Last update Monday Jan 10 12:11 pm 2022
+Last update Monday Jan 27 12:11 pm 2025
 
 This file defines the neural network models used for both the simulations and
-empirical application in Colangelo and Lee (2021). PyTorch is the package used
+empirical application in Colangelo and Lee (2025). PyTorch is the package used
 for all neural networks. We begin by defining a class "NeuralNet" which creates
 a torch neural network that adheres to the requirements of the DDMLCT class. 
 That is, DDMLCT requires models which have both a .fit and .predict method,
 so NeuralNet creates this for us. We also define class NeuralNetk as the base
 class for the K neural network which utilizes the additional kernel function
-in the loss function as specified in Colangelo and Lee (2021).
-We then define a subclass of NeuralNet for each of the 4 models used in the 
+in the loss function as specified in Colangelo and Lee (2025).
+We then define a subclass of NeuralNet and NeuralNetk for each of the models used in the 
 simulations and empirical application. To define a new neural network model 
 which can be used with the DDMLCT class, you need only define a subclass of 
 NeuralNet or NeuralNetk and define the layers as has been done below, and 

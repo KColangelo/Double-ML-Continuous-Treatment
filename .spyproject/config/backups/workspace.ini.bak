@@ -8,5 +8,5 @@ recent_files = ['..\\..\\.spyder-py3\\temp.py', 'simulation.py', 'Supplement\\mo
 
 [main]
 version = 0.2.0
-recent_files = ['simulation.py', 'Supplement\\dgp.py', 'Supplement\\__init__.py', 'Supplement\\estimation.py', 'simulation_results.py', 'Tuning Simulation.py', 'Supplement\\file_management.py']
+recent_files = ['simulation.py', 'Supplement\\dgp.py', 'simulation_results.py', 'graphs.py', 'Supplement\\estimation.py', 'Supplement\\tuning_parameters.py']
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Mar 24 21:04:04 2020
-Last update Sunday Oct 27 11:30 am 2023
+Last update Sunday Jan 27 11:30 am 2025
 
 This file provides the main double debiased machine learning estimator for
 continuous treatments. The class "DDMLCT" performs the estimation when the
@@ -13,7 +13,7 @@ and one for estimation gamma. model1 is used for estimating gamma and model2 is
 used for estimation of the GPS
 
 DDMLCT saves computation time by fitting models for each value of t once for
-each fold of cross-fititng. Since the K Neural Network in Colangelo and Lee (2022) 
+each fold of cross-fititng. Since the K Neural Network in Colangelo and Lee (2025) 
 uses a unique loss which depends on t, we had to define another class "NN_DDMLCT"
 which accounts for this and fits the models for every t. Other than this adjustment,
 both classes are nearly identical.
@@ -114,8 +114,8 @@ class DDMLCT:
     # subsample.
     def naive(self,Xf,XT,Xt,Y,I,I_C,L):
         if self.naive_count < self.L:
-                 self.gamma_models.append(self.model1.fit(np.column_stack((XT[I_C],Xf[I_C])),Y[I_C]))
-                 self.naive_count +=1
+            self.gamma_models.append(self.model1.fit(np.column_stack((XT[I_C],Xf[I_C])),Y[I_C]))
+            self.naive_count +=1
         gamma = self.gamma_models[L].predict(np.column_stack((Xt[I],Xf[I])))
         # if sdml==False:
         #     if self.naive_count < self.L:

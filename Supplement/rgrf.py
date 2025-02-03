@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jun  8 16:16:53 2021
-Last update Monday Jan 10 1:15 pm 2022
+Last update Monday Jan 31 1:15 pm 2025
 
 This file uses the rpy2 package to call the generalizes random forest R 
 package.
 
-@author: Kyle
 """
 
 import numpy as np
